@@ -11,7 +11,10 @@ export class LoadingSpinner extends Component {
             style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}
           ></div>
         </div>
-        <span className="ml-3 text-gray-600 font-medium">
+        <span
+          data-testid="loading-message"
+          className="ml-3 text-gray-600 font-medium"
+        >
           Searching the galaxy...
         </span>
       </div>

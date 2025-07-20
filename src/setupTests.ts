@@ -26,4 +26,5 @@ global.console = {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorageMock.getItem.mockReturnValue(null);
+  //window.localStorage.clear();
 });
