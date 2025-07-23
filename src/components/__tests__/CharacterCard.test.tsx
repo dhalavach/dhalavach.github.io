@@ -47,12 +47,6 @@ describe('CharacterCard', () => {
       expect(screen.getByText('19BBY')).toBeInTheDocument();
     });
 
-    // it('renders user icon', () => {
-    //   render(<CharacterCard character={mockCharacter} />);
-
-    //   const userIcon = screen.getByRole('img', { hidden: true });
-    //   expect(userIcon).toBeInTheDocument();
-    // });
   });
 
   describe('Data Handling Tests', () => {

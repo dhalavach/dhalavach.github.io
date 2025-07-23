@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import App from '../App';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock the API response
 const mockApiResponse = {
   result: [
     {
@@ -93,11 +92,7 @@ describe('App', () => {
 
       render(<App />);
 
-      // Should show loading state
-      // const loadingSpan = screen.getByTestId('loading-message');
-      // expect(loadingSpan).toHaveTextContent('Searching the galaxy...');
 
-      // Resolve the promise
       resolvePromise!({
         ok: true,
         json: async () => ({ result: [] }),
@@ -214,7 +209,6 @@ describe('App', () => {
     it('handles retry functionality', async () => {
       const user = userEvent.setup();
 
-      // First call fails
       global.fetch = vi
         .fn()
         .mockRejectedValueOnce(new Error('Network error'))
@@ -225,16 +219,13 @@ describe('App', () => {
 
       render(<App />);
 
-      // Wait for error to appear
       await waitFor(() => {
         expect(screen.getByText('Network error')).toBeInTheDocument();
       });
 
-      // Click retry
       const retryButton = screen.getByRole('button', { name: 'Try Again' });
       await user.click(retryButton);
 
-      // Should show success after retry
       await waitFor(() => {
         expect(screen.getByText('Luke Skywalker')).toBeInTheDocument();
       });

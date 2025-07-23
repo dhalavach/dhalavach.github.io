@@ -133,18 +133,6 @@ describe('APIService', () => {
       );
     });
 
-    // it('handles network errors with retry and fallback', async () => {
-    //   global.fetch = vi
-    //     .fn()
-    //     .mockRejectedValueOnce(new Error('Failed to fetch'));
-
-    //   const result = await APIService.searchCharacters('Luke');
-
-    //   // Should return mock data as fallback
-    //   expect(result.results).toHaveLength(3);
-    //   expect(result.results[0].name).toBe('Luke Skywalker');
-    // });
-
     it('handles CORS errors with fallback', async () => {
       global.fetch = vi.fn().mockRejectedValueOnce(new Error('CORS error'));
 

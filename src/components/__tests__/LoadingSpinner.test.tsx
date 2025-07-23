@@ -13,7 +13,6 @@ describe('LoadingSpinner', () => {
     it('has proper accessibility attributes', () => {
       render(<LoadingSpinner />);
 
-      // Check for loading text that acts as a label
       const loadingText = screen.getByText('Searching the galaxy...');
       expect(loadingText).toBeInTheDocument();
     });
@@ -21,15 +20,12 @@ describe('LoadingSpinner', () => {
     it('renders spinner elements with correct styling', () => {
       const { container } = render(<LoadingSpinner />);
 
-      // Check for spinner elements
       const spinners = container.querySelectorAll('.animate-spin');
       expect(spinners).toHaveLength(2);
 
-      // Check for main spinner
       const mainSpinner = container.querySelector('.border-t-blue-600');
       expect(mainSpinner).toBeInTheDocument();
 
-      // Check for secondary spinner
       const secondarySpinner = container.querySelector('.border-t-yellow-400');
       expect(secondarySpinner).toBeInTheDocument();
     });

@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Component that throws an error for testing
 const ThrowError = ({ shouldThrow }: { shouldThrow: boolean }) => {
   if (shouldThrow) {
     throw new Error('Test error');
@@ -11,7 +10,6 @@ const ThrowError = ({ shouldThrow }: { shouldThrow: boolean }) => {
   return <div>No error</div>;
 };
 
-// Mock window.location.reload
 Object.defineProperty(window, 'location', {
   value: {
     reload: vi.fn(),
@@ -22,7 +20,6 @@ Object.defineProperty(window, 'location', {
 describe('ErrorBoundary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Suppress console.error for these tests since we're intentionally throwing errors
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
@@ -86,16 +83,6 @@ describe('ErrorBoundary', () => {
   });
 
   describe('Error UI Tests', () => {
-    // it('displays error icon', () => {
-    //   render(
-    //     <ErrorBoundary>
-    //       <ThrowError shouldThrow={true} />
-    //     </ErrorBoundary>
-    //   );
-
-    //   const errorIcon = screen.getByRole('img', { hidden: true });
-    //   expect(errorIcon).toBeInTheDocument();
-    // });
 
     it('displays error details when available', () => {
       render(
@@ -189,7 +176,6 @@ describe('ErrorBoundary', () => {
 
       expect(screen.getByText('Something went wrong')).toBeInTheDocument();
 
-      // Re-render with same error
       rerender(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
