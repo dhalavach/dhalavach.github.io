@@ -15,8 +15,20 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"
   },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write",
+      "eslint --fix",
+      "git add"
+    ],
+    "*.{json,css,scss,md}": [
+      "prettier --write",
+      "git add"
+    ]
+  },
   "dependencies": {
     "@testing-library/user-event": "^14.6.1",
+    "lint-staged": "^16.1.2",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

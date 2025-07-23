@@ -46,7 +46,6 @@ describe('CharacterCard', () => {
       expect(screen.getByText('77kg')).toBeInTheDocument();
       expect(screen.getByText('19BBY')).toBeInTheDocument();
     });
-
   });
 
   describe('Data Handling Tests', () => {

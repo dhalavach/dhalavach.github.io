@@ -19,7 +19,6 @@ describe('ErrorMessage', () => {
       expect(screen.getAllByText('Something went wrong')).not.toHaveLength(0);
     });
 
-  
     it('displays error title', () => {
       render(<ErrorMessage {...defaultProps} />);
 

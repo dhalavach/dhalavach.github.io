@@ -92,7 +92,6 @@ describe('App', () => {
 
       render(<App />);
 
-
       resolvePromise!({
         ok: true,
         json: async () => ({ result: [] }),

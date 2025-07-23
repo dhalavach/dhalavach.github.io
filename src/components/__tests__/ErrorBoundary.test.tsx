@@ -83,7 +83,6 @@ describe('ErrorBoundary', () => {
   });
 
   describe('Error UI Tests', () => {
-
     it('displays error details when available', () => {
       render(
         <ErrorBoundary>
