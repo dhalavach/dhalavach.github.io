@@ -3,8 +3,7 @@
 
 echo "Running pre-push checks..."
 
-npm run test -- --watchAll=false --bail
-
+npm run test
 npm run type-check
 
 npm run build
