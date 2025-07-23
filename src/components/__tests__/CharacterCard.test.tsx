@@ -97,7 +97,6 @@ describe('CharacterCard', () => {
       render(<CharacterCard character={characterWithUnknownValues} />);
 
       expect(screen.getByText('Luke Skywalker')).toBeInTheDocument();
-      // Should not display any description when all values are unknown
       expect(screen.queryByText(/•/)).not.toBeInTheDocument();
     });
 
