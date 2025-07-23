@@ -87,7 +87,7 @@ export class APIService {
         : `${BASE_URL}/people/`;
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const response = await fetch(url, {
         method: 'GET',
