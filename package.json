@@ -15,6 +15,7 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "type-check-staged": "tsc-files --noEmit --pretty",
+    "type-check": "tsc --noEmit",
     "test:staged": "vitest related --passWithNoTests"
   },
   "lint-staged": {
