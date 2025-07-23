@@ -1,2 +1,12 @@
-npm run test
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "Running pre-push checks..."
+
+npm run test -- --watchAll=false --bail
+
+npm run type-check
+
 npm run build
+
+echo "✓ All checks passed!"

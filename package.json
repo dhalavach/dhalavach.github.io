@@ -13,12 +13,15 @@
     "format": "prettier --write .",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "type-check-staged": "tsc-files --noEmit --pretty",
+    "test:staged": "vitest related --passWithNoTests"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
       "prettier --write",
-      "eslint --fix",
+      "eslint --fix --max-warnings=0",
+      "npm run test:staged",
       "git add"
     ],
     "*.{json,css,scss,md}": [
