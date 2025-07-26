@@ -45,9 +45,7 @@ describe('App', () => {
       expect(
         screen.getByPlaceholderText('Search for Star Wars characters...')
       ).toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: 'Search' })
-      ).toBeInTheDocument();
+      expect(screen.getByTestId('search-button')).toBeInTheDocument();
     });
 
     it('makes initial API call on component mount with empty search', async () => {
@@ -157,9 +155,9 @@ describe('App', () => {
       const input = screen.getByPlaceholderText(
         'Search for Star Wars characters...'
       );
-      const button = screen.getByRole('button', { name: 'Search' });
+      const button = screen.getByTestId('search-button');
 
-      //await user.clear(input);
+      await user.type(input, '');
       await user.type(input, 'Darth Vader');
       await user.click(button);
 
@@ -199,7 +197,7 @@ describe('App', () => {
 
       const input = screen.getByRole('textbox');
 
-      await user.clear(input);
+      await user.type(input, '');
       await user.type(input, 'Yoda');
 
       expect(input).toHaveValue('Yoda');

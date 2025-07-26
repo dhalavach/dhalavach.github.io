@@ -1,113 +1,94 @@
-import { Component } from 'react';
+import { useState, useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { SearchSection } from './components/SearchSection';
 import { ResultsSection } from './components/ResultsSection';
+import { CharacterCard } from './components/CharacterCard';
 import type { Character } from './types/Character';
-//import { APIService } from './services/api';
 import { Bug } from 'lucide-react';
 
-interface State {
-  characters: Character[];
-  isLoading: boolean;
-  error: string | null;
-  currentSearchTerm: string;
-}
+const App = () => {
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentSearchTerm, setCurrentSearchTerm] = useState('');
 
-class AppContent extends Component<object, State> {
-  constructor(props: object) {
-    super(props);
-
-    this.state = {
-      characters: [],
-      isLoading: false,
-      error: null,
-      currentSearchTerm: '',
-    };
-  }
-
-  private handleSearch = async (searchTerm: string) => {
-    this.setState({
-      isLoading: true,
-      error: null,
-      currentSearchTerm: searchTerm,
-    });
+  const handleSearch = useCallback(async (searchTerm: string) => {
+    setIsLoading(true);
+    setError(null);
+    setCurrentSearchTerm(searchTerm);
 
     try {
-      // const response = await APIService.searchCharacters(searchTerm);
-      this.setState({
-        //characters: response.results,
-        isLoading: false,
-      });
       const response = await fetch(
         `https://swapi.tech/api/people/?name=${encodeURIComponent(searchTerm)}`
       );
       const data = await response.json();
 
       if (data.result && data.result.length > 0) {
-        this.setState({
-          characters: data.result.map(
-            (item: { properties: Character }) => item.properties
-          ),
-        });
+        setCharacters(
+          data.result.map((item: { properties: Character }) => item.properties)
+        );
+      } else {
+        setCharacters([]);
       }
     } catch (error) {
       console.error('Search error:', error);
-      this.setState({
-        error:
-          error instanceof Error
-            ? error.message
-            : 'An unexpected error occurred',
-        isLoading: false,
-        characters: [],
-      });
+      setError(
+        error instanceof Error ? error.message : 'An unexpected error occurred'
+      );
+      setCharacters([]);
+    } finally {
+      setIsLoading(false);
     }
+  }, []);
+  const handleRetry = () => {
+    handleSearch(currentSearchTerm);
   };
 
-  private handleRetry = () => {
-    this.handleSearch(this.state.currentSearchTerm);
-  };
-
-  private throwTestError = () => {
+  const throwTestError = () => {
     throw new Error(
       'This is a test error to demonstrate the error boundary functionality'
     );
   };
 
-  render() {
-    const { characters, isLoading, error } = this.state;
-
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <SearchSection onSearch={this.handleSearch} isLoading={isLoading} />
-
-        <ResultsSection
-          characters={characters}
-          isLoading={isLoading}
-          error={error}
-          onRetry={this.handleRetry}
-        />
-
-        {/* Error Test Button */}
-        <div className="fixed bottom-4 right-4">
-          <button
-            onClick={this.throwTestError}
-            className="bg-red-600 text-white p-3 rounded-full shadow-lg hover:bg-red-700 transition-colors"
-            title="Test Error Boundary"
-          >
-            <Bug className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-    );
-  }
-}
-
-function App() {
   return (
-    <ErrorBoundary>
-      <AppContent />
-    </ErrorBoundary>
+    <Router>
+      <ErrorBoundary>
+        <div className="min-h-screen bg-gray-50 flex flex-col">
+          <SearchSection onSearch={handleSearch} isLoading={isLoading} />
+
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <ResultsSection
+                  characters={characters}
+                  isLoading={isLoading}
+                  error={error}
+                  onRetry={handleRetry}
+                />
+              }
+            />
+            <Route
+              path="/character/:id"
+              element={<CharacterCard character={characters[0]} />}
+            />
+          </Routes>
+
+          {/* Error Test Button */}
+          <div className="fixed bottom-4 right-4">
+            <button
+              onClick={throwTestError}
+              className="bg-red-600 text-white p-3 rounded-full shadow-lg hover:bg-red-700 transition-colors"
+              title="Test Error Boundary"
+            >
+              <Bug className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </ErrorBoundary>
+    </Router>
   );
-}
+};
 
 export default App;
