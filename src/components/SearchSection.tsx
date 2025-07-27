@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 
 interface Props {
-  onSearch: (searchTerm: string) => void;
+  onSearch: (searchTerm: string, page?: number) => void;
   isLoading: boolean;
 }
 
@@ -14,8 +14,12 @@ export const SearchSection = ({ onSearch, isLoading }: Props) => {
   );
 
   useEffect(() => {
-    onSearch(searchTerm);
-  }, [searchTerm, onSearch]);
+    // Only trigger search on mount if there's a saved search term
+    const savedTerm = localStorage.getItem(STORAGE_KEY);
+    if (savedTerm) {
+      onSearch(savedTerm, 1);
+    }
+  }, [onSearch]);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
@@ -24,7 +28,7 @@ export const SearchSection = ({ onSearch, isLoading }: Props) => {
   const handleSearch = () => {
     const trimmedTerm = searchTerm.trim();
     localStorage.setItem(STORAGE_KEY, trimmedTerm);
-    onSearch(trimmedTerm);
+    onSearch(trimmedTerm, 1); // Always start from page 1 for new searches
   };
 
   const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {

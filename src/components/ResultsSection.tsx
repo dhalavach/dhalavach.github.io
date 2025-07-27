@@ -1,23 +1,30 @@
-import type { Character } from '../types/Character.ts';
+import type { Character, PaginationInfo } from '../types/Character';
 import { CharacterCard } from './CharacterCard';
-import { LoadingSpinner } from './LoadingSpinner.tsx';
-import { ErrorMessage } from './ErrorMessage.tsx';
+import { LoadingSpinner } from './LoadingSpinner';
+import { ErrorMessage } from './ErrorMessage';
+import { Pagination } from './Pagination';
 
 interface Props {
   characters: Character[];
+  pagination: PaginationInfo | null;
   isLoading: boolean;
   error: string | null;
   onRetry: () => void;
+  onPageChange: (page: number) => void;
+  onCharacterClick?: (character: Character) => void;
 }
 
 export const ResultsSection = ({
   characters,
+  pagination,
   isLoading,
   error,
   onRetry,
+  onPageChange,
+  onCharacterClick,
 }: Props) => {
   return (
-    <div className="flex-1 p-6 bg-gray-50">
+    <div className="flex-1 p-6 bg-gray-50 transition-all duration-300">
       <div className="max-w-4xl mx-auto">
         {isLoading && <LoadingSpinner />}
 
@@ -35,8 +42,14 @@ export const ResultsSection = ({
           <div>
             <div className="mb-6">
               <h2 className="text-xl font-semibold text-gray-900">
-                Search Results ({characters.length} character
-                {characters.length !== 1 ? 's' : ''})
+                Search Results
+                {pagination && (
+                  <span className="text-gray-600 font-normal">
+                    {' '}
+                    ({pagination.totalCount} character
+                    {pagination.totalCount !== 1 ? 's' : ''} found)
+                  </span>
+                )}
               </h2>
             </div>
 
@@ -45,9 +58,18 @@ export const ResultsSection = ({
                 <CharacterCard
                   key={`${character.url}-${index}`}
                   character={character}
+                  onClick={onCharacterClick}
                 />
               ))}
             </div>
+
+            {pagination && (
+              <Pagination
+                pagination={pagination}
+                onPageChange={onPageChange}
+                isLoading={isLoading}
+              />
+            )}
           </div>
         )}
       </div>

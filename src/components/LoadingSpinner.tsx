@@ -1,19 +1,11 @@
+import React from 'react';
+import { Loader2 } from 'lucide-react';
+
 export const LoadingSpinner = () => {
   return (
-    <div className="flex items-center justify-center py-12">
-      <div className="relative">
-        <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-        <div
-          className="absolute inset-0 w-12 h-12 border-4 border-transparent border-t-yellow-400 rounded-full animate-spin"
-          style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}
-        ></div>
-      </div>
-      <span
-        data-testid="loading-message"
-        className="ml-3 text-gray-600 font-medium"
-      >
-        Searching the galaxy...
-      </span>
+    <div className="flex flex-col items-center justify-center py-12">
+      <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" />
+      <p className="text-gray-600">Searching the galaxy...</p>
     </div>
   );
 };

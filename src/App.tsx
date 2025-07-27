@@ -1,93 +1,88 @@
 import { useState, useCallback } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ErrorBoundary } from './components/ErrorBoundary';
 import { SearchSection } from './components/SearchSection';
 import { ResultsSection } from './components/ResultsSection';
-import { CharacterCard } from './components/CharacterCard';
-import type { Character } from './types/Character';
-import { Bug } from 'lucide-react';
+import { CharacterDetailsPanel } from './components/CharacterDetailsPanel';
+import { APIService, createPaginationInfo } from './services/api';
+import type { Character, PaginationInfo } from './types/Character';
 
 const App = () => {
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentSearchTerm, setCurrentSearchTerm] = useState('');
+  const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(
+    null
+  );
+  const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false);
 
-  const handleSearch = useCallback(async (searchTerm: string) => {
-    setIsLoading(true);
-    setError(null);
-    setCurrentSearchTerm(searchTerm);
+  const handleSearch = useCallback(
+    async (searchTerm: string, page: number = 1) => {
+      setIsLoading(true);
+      setError(null);
+      setCurrentSearchTerm(searchTerm);
 
-    try {
-      const response = await fetch(
-        `https://swapi.tech/api/people/?name=${encodeURIComponent(searchTerm)}`
-      );
-      const data = await response.json();
+      try {
+        const response = await APIService.searchCharacters(searchTerm, page);
 
-      if (data.result && data.result.length > 0) {
-        setCharacters(
-          data.result.map((item: { properties: Character }) => item.properties)
+        setCharacters(response.results);
+        setPagination(createPaginationInfo(response, page));
+      } catch (error) {
+        console.error('Search error:', error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : 'An unexpected error occurred'
         );
-      } else {
         setCharacters([]);
+        setPagination(null);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Search error:', error);
-      setError(
-        error instanceof Error ? error.message : 'An unexpected error occurred'
-      );
-      setCharacters([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
+
+  const handlePageChange = useCallback(
+    (page: number) => {
+      handleSearch(currentSearchTerm, page);
+    },
+    [currentSearchTerm, handleSearch]
+  );
+
   const handleRetry = () => {
-    handleSearch(currentSearchTerm);
+    const currentPage = pagination?.currentPage || 1;
+    handleSearch(currentSearchTerm, currentPage);
   };
 
-  const throwTestError = () => {
-    throw new Error(
-      'This is a test error to demonstrate the error boundary functionality'
-    );
+  const handleCharacterClick = (character: Character) => {
+    setSelectedCharacter(character);
+    setIsDetailsPanelOpen(true);
+  };
+
+  const handleCloseDetailsPanel = () => {
+    setIsDetailsPanelOpen(false);
+    setSelectedCharacter(null);
   };
 
   return (
-    <Router>
-      <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 flex flex-col">
-          <SearchSection onSearch={handleSearch} isLoading={isLoading} />
-
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <ResultsSection
-                  characters={characters}
-                  isLoading={isLoading}
-                  error={error}
-                  onRetry={handleRetry}
-                />
-              }
-            />
-            <Route
-              path="/character/:id"
-              element={<CharacterCard character={characters[0]} />}
-            />
-          </Routes>
-
-          {/* Error Test Button */}
-          <div className="fixed bottom-4 right-4">
-            <button
-              onClick={throwTestError}
-              className="bg-red-600 text-white p-3 rounded-full shadow-lg hover:bg-red-700 transition-colors"
-              title="Test Error Boundary"
-            >
-              <Bug className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </ErrorBoundary>
-    </Router>
+    <div className="min-h-screen bg-gray-50 flex flex-col relative">
+      <SearchSection onSearch={handleSearch} isLoading={isLoading} />
+      <ResultsSection
+        characters={characters}
+        pagination={pagination}
+        isLoading={isLoading}
+        error={error}
+        onRetry={handleRetry}
+        onPageChange={handlePageChange}
+        onCharacterClick={handleCharacterClick}
+      />
+      <CharacterDetailsPanel
+        character={selectedCharacter}
+        isOpen={isDetailsPanelOpen}
+        onClose={handleCloseDetailsPanel}
+      />
+    </div>
   );
 };
 

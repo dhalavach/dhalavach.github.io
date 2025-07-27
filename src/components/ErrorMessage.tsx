@@ -1,26 +1,28 @@
-import { AlertCircle } from 'lucide-react';
+import React from 'react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 
 interface Props {
   message: string;
-  onRetry?: () => void;
+  onRetry: () => void;
 }
 
 export const ErrorMessage = ({ message, onRetry }: Props) => {
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4">
-      <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
-      <h3 className="text-xl font-semibold text-gray-900 mb-2">
-        Something went wrong
-      </h3>
-      <p className="text-gray-600 text-center mb-6 max-w-md">{message}</p>
-      {onRetry && (
+    <div className="flex flex-col items-center justify-center py-12">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md w-full">
+        <div className="flex items-center mb-4">
+          <AlertCircle className="w-6 h-6 text-red-600 mr-3" />
+          <h3 className="text-lg font-semibold text-red-800">Error</h3>
+        </div>
+        <p className="text-red-700 mb-4">{message}</p>
         <button
           onClick={onRetry}
-          className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
+          className="flex items-center justify-center w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
         >
+          <RefreshCw className="w-4 h-4 mr-2" />
           Try Again
         </button>
-      )}
+      </div>
     </div>
   );
 };

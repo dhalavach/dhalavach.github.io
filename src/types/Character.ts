@@ -23,3 +23,11 @@ export interface APIResponse {
   previous: string | null;
   results: Character[];
 }
+
+export interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}

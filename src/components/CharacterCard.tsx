@@ -1,8 +1,9 @@
 import { User, Calendar, Ruler, Weight } from 'lucide-react';
-import type { Character } from '../types/Character.ts';
+import type { Character } from '../types/Character';
 
 interface Props {
   character: Character;
+  onClick?: (character: Character) => void;
 }
 
 const formatDescription = (character: Character): string => {
@@ -27,11 +28,20 @@ const formatDescription = (character: Character): string => {
   return details.join(' • ');
 };
 
-export const CharacterCard = ({ character }: Props) => {
+export const CharacterCard = ({ character, onClick }: Props) => {
   const description = formatDescription(character);
 
+  const handleClick = () => {
+    if (onClick) {
+      onClick(character);
+    }
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 p-6 border border-gray-200">
+    <div
+      className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 p-6 border border-gray-200 cursor-pointer hover:border-blue-300 hover:scale-[1.02]"
+      onClick={handleClick}
+    >
       <div className="flex items-start space-x-4">
         <div className="flex-shrink-0">
           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
