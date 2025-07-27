@@ -3,7 +3,7 @@ import { Search } from 'lucide-react';
 import { debounce } from 'lodash-es';
 
 interface Props {
-  onSearch: (searchTerm: string) => void;
+  onSearch: (searchTerm: string, page?: number) => void;
   isLoading: boolean;
   initialSearchTerm?: string;
 }
@@ -11,46 +11,27 @@ interface Props {
 const STORAGE_KEY = 'starwars-search-term';
 const DEBOUNCE_DELAY = 300; // ms - reduced for better responsiveness
 
-export const SearchSection = ({
-  onSearch,
-  isLoading,
-  initialSearchTerm = '',
-}: Props) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [hasInitialized, setHasInitialized] = useState(false);
-
-  // Debounced search function
-  const debouncedSearch = useCallback(
-    debounce((term: string) => {
-      const trimmedTerm = term.trim();
-      try {
-        if (trimmedTerm) {
-          localStorage.setItem(STORAGE_KEY, trimmedTerm);
-        } else {
-          localStorage.removeItem(STORAGE_KEY);
-        }
-      } catch (error) {
-        console.warn('Failed to save search term to localStorage:', error);
-      }
-      onSearch(trimmedTerm);
-    }, DEBOUNCE_DELAY),
-    [onSearch]
+export const SearchSection = ({ onSearch, isLoading }: Props) => {
+  const [searchTerm, setSearchTerm] = useState(
+    localStorage.getItem(STORAGE_KEY) || ''
   );
 
-  // Handle manual search (button press or enter key)
-  const handleManualSearch = () => {
-    debouncedSearch.cancel(); // Cancel any pending debounced search
-    const trimmedTerm = searchTerm.trim();
-    try {
-      if (trimmedTerm) {
-        localStorage.setItem(STORAGE_KEY, trimmedTerm);
-      } else {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    } catch (error) {
-      console.warn('Failed to save search term to localStorage:', error);
+  useEffect(() => {
+    // Only trigger search on mount if there's a saved search term
+    const savedTerm = localStorage.getItem(STORAGE_KEY);
+    if (savedTerm) {
+      onSearch(savedTerm, 1);
     }
-    onSearch(trimmedTerm);
+  }, [onSearch]);
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+  };
+
+  const handleSearch = () => {
+    const trimmedTerm = searchTerm.trim();
+    localStorage.setItem(STORAGE_KEY, trimmedTerm);
+    onSearch(trimmedTerm, 1); // Always start from page 1 for new searches
   };
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {

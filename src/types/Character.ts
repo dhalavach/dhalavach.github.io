@@ -29,3 +29,11 @@ export interface ApiResponse {
   next: string | null;
   results: Character[];
 }
+
+export interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}

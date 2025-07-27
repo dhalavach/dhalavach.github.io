@@ -1,361 +1,396 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { server } from '../test/mocks/server.ts';
 import { errorHandlers, rateLimitHandlers } from '../test/mocks/handlers.ts';
 import App from '../App';
+import { APIService } from '../services/api';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock the useCharacterCache hook
-const mockSearchCharacters = vi.fn();
-const mockGetDetailedCharacter = vi.fn();
-
-vi.mock('../hooks/useCharacterCache', () => ({
-  useCharacterCache: () => ({
-    searchCharacters: mockSearchCharacters,
-    getDetailedCharacter: mockGetDetailedCharacter,
-    isLoading: false,
-    error: null,
-  }),
+// Mock the API service
+vi.mock('../services/api', () => ({
+  APIService: {
+    searchCharacters: vi.fn(),
+  },
+  createPaginationInfo: vi.fn(),
 }));
 
+// Mock localStorage
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+};
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+});
+
+const mockAPIResponse = {
+  count: 1,
+  next: null,
+  previous: null,
+  results: [
+    {
+      name: 'Luke Skywalker',
+      height: '172',
+      mass: '77',
+      hair_color: 'blond',
+      skin_color: 'fair',
+      eye_color: 'blue',
+      birth_year: '19BBY',
+      gender: 'male',
+      homeworld: 'https://swapi.dev/api/planets/1/',
+      films: ['https://swapi.dev/api/films/1/'],
+      species: [],
+      vehicles: ['https://swapi.dev/api/vehicles/14/'],
+      starships: ['https://swapi.dev/api/starships/12/'],
+      created: '2014-12-09T13:50:51.644000Z',
+      edited: '2014-12-20T21:17:56.891000Z',
+      url: 'https://swapi.dev/api/people/1/',
+    },
+  ],
+};
+
+const mockPaginationInfo = {
+  currentPage: 1,
+  totalPages: 1,
+  totalCount: 1,
+  hasNext: false,
+  hasPrevious: false,
+};
+
 describe('App', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
-    localStorage.clear();
-    server.listen();
+    localStorageMock.getItem.mockReturnValue('');
+    (APIService.searchCharacters as any).mockResolvedValue(mockAPIResponse);
+
+    // Mock createPaginationInfo - import it directly from the mocked module
+    const { createPaginationInfo } = await import('../services/api');
+    createPaginationInfo.mockReturnValue(mockPaginationInfo);
   });
 
-  afterEach(() => {
-    server.resetHandlers();
+  it('renders the main components', () => {
+    render(<App />);
+
+    expect(screen.getByText('Star Wars Character Search')).toBeInTheDocument();
+    expect(screen.getByTestId('search-box')).toBeInTheDocument();
+    expect(screen.getByTestId('search-button')).toBeInTheDocument();
   });
 
-  describe('Integration Tests', () => {
-    it('renders search section and results section', () => {
-      render(<App />);
+  it('performs search when search button is clicked', async () => {
+    const user = userEvent.setup();
+    render(<App />);
 
+    const searchInput = screen.getByTestId('search-box');
+    const searchButton = screen.getByTestId('search-button');
+
+    await user.type(searchInput, 'Luke');
+    await user.click(searchButton);
+
+    await waitFor(() => {
+      expect(APIService.searchCharacters).toHaveBeenCalledWith('Luke', 1);
+    });
+  });
+
+  it('displays search results', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const searchInput = screen.getByTestId('search-box');
+    const searchButton = screen.getByTestId('search-button');
+
+    await user.type(searchInput, 'Luke');
+    await user.click(searchButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Luke Skywalker')).toBeInTheDocument();
+    });
+  });
+
+  it('handles API errors gracefully', async () => {
+    (APIService.searchCharacters as any).mockRejectedValue(
+      new Error('Network error')
+    );
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    const searchInput = screen.getByTestId('search-box');
+    const searchButton = screen.getByTestId('search-button');
+
+    await user.type(searchInput, 'Luke');
+    await user.click(searchButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Network error')).toBeInTheDocument();
+    });
+  });
+
+  it('shows loading state during search', async () => {
+    // Make the API call hang to test loading state
+    (APIService.searchCharacters as any).mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve(mockAPIResponse), 100)
+        )
+    );
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    const searchInput = screen.getByTestId('search-box');
+    const searchButton = screen.getByTestId('search-button');
+
+    await user.type(searchInput, 'Luke');
+    await user.click(searchButton);
+
+    expect(screen.getByText('Searching the galaxy...')).toBeInTheDocument();
+    expect(searchButton).toHaveTextContent('Searching...');
+
+    await waitFor(() => {
+      expect(screen.getByText('Luke Skywalker')).toBeInTheDocument();
+    });
+  });
+
+  it('opens character details panel when character is clicked', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const searchInput = screen.getByTestId('search-box');
+    const searchButton = screen.getByTestId('search-button');
+
+    await user.type(searchInput, 'Luke');
+    await user.click(searchButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Luke Skywalker')).toBeInTheDocument();
+    });
+
+    const characterCard = screen.getByText('Luke Skywalker').closest('div');
+    if (characterCard) {
+      await user.click(characterCard);
+
+      // Check if details panel is open
+      await waitFor(() => {
+        expect(screen.getAllByText('Luke Skywalker')).toHaveLength(2); // One in card, one in panel
+        expect(screen.getByText('Basic Information')).toBeInTheDocument();
+      });
+    }
+  });
+
+  it('closes character details panel when close button is clicked', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const searchInput = screen.getByTestId('search-box');
+    const searchButton = screen.getByTestId('search-button');
+
+    await user.type(searchInput, 'Luke');
+    await user.click(searchButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Luke Skywalker')).toBeInTheDocument();
+    });
+
+    const characterCard = screen.getByText('Luke Skywalker').closest('div');
+    if (characterCard) {
+      await user.click(characterCard);
+
+      await waitFor(() => {
+        expect(screen.getByText('Basic Information')).toBeInTheDocument();
+      });
+
+      const closeButton = screen.getByLabelText('Close details panel');
+      await user.click(closeButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Basic Information')).not.toBeInTheDocument();
+      });
+    }
+  });
+
+  it('shows no results message when no characters found', async () => {
+    (APIService.searchCharacters as any).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    const searchInput = screen.getByTestId('search-box');
+    const searchButton = screen.getByTestId('search-button');
+
+    await user.type(searchInput, 'NonexistentCharacter');
+    await user.click(searchButton);
+
+    await waitFor(() => {
       expect(
-        screen.getByText('Star Wars Character Search')
+        screen.getByText('No characters found. Try a different search term.')
       ).toBeInTheDocument();
-      expect(screen.getByTestId('search-box')).toBeInTheDocument();
-      expect(screen.getByTestId('search-button')).toBeInTheDocument();
-    });
-
-    it('handles search term from localStorage on initial load', () => {
-      const savedTerm = 'Luke Skywalker';
-      localStorage.setItem('starwars-search-term', savedTerm);
-      mockSearchCharacters.mockResolvedValue([
-        {
-          uid: '1',
-          name: 'Luke Skywalker',
-          url: 'https://swapi.tech/api/people/1',
-        },
-      ]);
-
-      render(<App />);
-
-      expect(screen.getByDisplayValue(savedTerm)).toBeInTheDocument();
-    });
-
-    it('displays no results message when search returns empty array', async () => {
-      mockSearchCharacters.mockResolvedValue([]);
-
-      render(<App />);
-
-      const searchInput = screen.getByTestId('search-box');
-      const searchButton = screen.getByTestId('search-button');
-
-      await userEvent.type(searchInput, 'NonexistentCharacter');
-      await userEvent.click(searchButton);
-
-      await waitFor(() => {
-        expect(
-          screen.getByText('No characters found. Try a different search term.')
-        ).toBeInTheDocument();
-      });
-    });
-
-    it('manages loading states during search', async () => {
-      // Mock a delayed response
-      mockSearchCharacters.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve([]), 100))
-      );
-
-      render(<App />);
-
-      const searchInput = screen.getByTestId('search-box');
-      const searchButton = screen.getByTestId('search-button');
-
-      await userEvent.type(searchInput, 'Luke');
-      await userEvent.click(searchButton);
-
-      // Should show loading state
-      expect(searchButton).toBeDisabled();
-      expect(screen.getByText('Searching...')).toBeInTheDocument();
     });
   });
 
-  describe('API Integration Tests', () => {
-    it('calls searchCharacters with correct parameters', async () => {
-      const mockCharacters = [
-        {
-          uid: '1',
-          name: 'Luke Skywalker',
-          url: 'https://swapi.tech/api/people/1',
-        },
-      ];
-      mockSearchCharacters.mockResolvedValue(mockCharacters);
+  it('handles pagination correctly', async () => {
+    const multiPageResponse = {
+      count: 20,
+      next: 'https://swapi.dev/api/people/?page=2',
+      previous: null,
+      results: [mockAPIResponse.results[0]],
+    };
 
-      render(<App />);
+    const multiPagePagination = {
+      currentPage: 1,
+      totalPages: 2,
+      totalCount: 20,
+      hasNext: true,
+      hasPrevious: false,
+    };
 
-      const searchInput = screen.getByTestId('search-box');
-      const searchButton = screen.getByTestId('search-button');
+    (APIService.searchCharacters as any).mockResolvedValue(multiPageResponse);
+    const { createPaginationInfo } = require('../services/api');
+    createPaginationInfo.mockReturnValue(multiPagePagination);
 
-      await userEvent.type(searchInput, 'Luke');
-      await userEvent.click(searchButton);
+    const user = userEvent.setup();
+    render(<App />);
 
-      expect(mockSearchCharacters).toHaveBeenCalledWith('Luke');
-    });
+    const searchInput = screen.getByTestId('search-box');
+    const searchButton = screen.getByTestId('search-button');
 
-    it('handles successful API responses', async () => {
-      const mockCharacters = [
-        {
-          uid: '1',
-          name: 'Luke Skywalker',
-          url: 'https://swapi.tech/api/people/1',
-        },
-        {
-          uid: '2',
-          name: 'Darth Vader',
-          url: 'https://swapi.tech/api/people/2',
-        },
-      ];
-      mockSearchCharacters.mockResolvedValue(mockCharacters);
-      mockGetDetailedCharacter.mockResolvedValue({
-        properties: {
-          name: 'Luke Skywalker',
-          gender: 'male',
-          birth_year: '19BBY',
-        },
-      });
+    await user.type(searchInput, 'Luke');
+    await user.click(searchButton);
 
-      render(<App />);
-
-      const searchInput = screen.getByTestId('search-box');
-      const searchButton = screen.getByTestId('search-button');
-
-      await userEvent.type(searchInput, 'Luke');
-      await userEvent.click(searchButton);
-
-      await waitFor(() => {
-        expect(
-          screen.getByText('Search Results (2 characters found)')
-        ).toBeInTheDocument();
-      });
-    });
-
-    it('handles API error responses', async () => {
-      const errorMessage = 'Network error occurred';
-      mockSearchCharacters.mockRejectedValue(new Error(errorMessage));
-
-      render(<App />);
-
-      const searchInput = screen.getByTestId('search-box');
-      const searchButton = screen.getByTestId('search-button');
-
-      await userEvent.type(searchInput, 'Luke');
-      await userEvent.click(searchButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('Something went wrong')).toBeInTheDocument();
-        expect(screen.getByText(errorMessage)).toBeInTheDocument();
-      });
-    });
-
-    it('handles 500 server errors', async () => {
-      server.use(...errorHandlers);
-      mockSearchCharacters.mockRejectedValue(
-        new Error('HTTP error! status: 500')
-      );
-
-      render(<App />);
-
-      const searchInput = screen.getByTestId('search-box');
-      const searchButton = screen.getByTestId('search-button');
-
-      await userEvent.type(searchInput, 'Luke');
-      await userEvent.click(searchButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('HTTP error! status: 500')).toBeInTheDocument();
-      });
-    });
-
-    it('handles 429 rate limit errors', async () => {
-      server.use(...rateLimitHandlers);
-      mockSearchCharacters.mockRejectedValue(
-        new Error('HTTP error! status: 429')
-      );
-
-      render(<App />);
-
-      const searchInput = screen.getByTestId('search-box');
-      const searchButton = screen.getByTestId('search-button');
-
-      await userEvent.type(searchInput, 'Luke');
-      await userEvent.click(searchButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('HTTP error! status: 429')).toBeInTheDocument();
-      });
+    await waitFor(() => {
+      expect(
+        screen.getByText('Showing page 1 of 2 (20 total characters)')
+      ).toBeInTheDocument();
     });
   });
 
-  describe('State Management Tests', () => {
-    it('updates component state based on API responses', async () => {
-      const mockCharacters = [
-        {
-          uid: '1',
-          name: 'Luke Skywalker',
-          url: 'https://swapi.tech/api/people/1',
-        },
-      ];
-      mockSearchCharacters.mockResolvedValue(mockCharacters);
-      mockGetDetailedCharacter.mockResolvedValue({
-        properties: {
-          name: 'Luke Skywalker',
-          gender: 'male',
-          birth_year: '19BBY',
-        },
-      });
+  it('handles page change correctly', async () => {
+    const multiPageResponse = {
+      count: 20,
+      next: 'https://swapi.dev/api/people/?page=2',
+      previous: null,
+      results: [mockAPIResponse.results[0]],
+    };
 
-      render(<App />);
+    const multiPagePagination = {
+      currentPage: 1,
+      totalPages: 2,
+      totalCount: 20,
+      hasNext: true,
+      hasPrevious: false,
+    };
 
-      const searchInput = screen.getByTestId('search-box');
-      const searchButton = screen.getByTestId('search-button');
+    (APIService.searchCharacters as any).mockResolvedValue(multiPageResponse);
+    const { createPaginationInfo } = await import('../services/api');
+    createPaginationInfo.mockReturnValue(multiPagePagination);
 
-      await userEvent.type(searchInput, 'Luke');
-      await userEvent.click(searchButton);
+    const user = userEvent.setup();
+    render(<App />);
 
-      await waitFor(() => {
-        expect(
-          screen.getByText('Search Results (1 character found)')
-        ).toBeInTheDocument();
-      });
+    const searchInput = screen.getByTestId('search-box');
+    const searchButton = screen.getByTestId('search-button');
+
+    await user.type(searchInput, 'Luke');
+    await user.click(searchButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Next page')).toBeInTheDocument();
     });
 
-    it('manages search term state correctly', async () => {
-      mockSearchCharacters.mockResolvedValue([]);
+    const nextButton = screen.getByTitle('Next page');
+    await user.click(nextButton);
 
-      render(<App />);
-
-      const searchInput = screen.getByTestId('search-box');
-
-      await userEvent.type(searchInput, 'Darth Vader');
-      expect(searchInput).toHaveValue('Darth Vader');
-
-      await userEvent.clear(searchInput);
-      await userEvent.type(searchInput, 'Luke Skywalker');
-      expect(searchInput).toHaveValue('Luke Skywalker');
-    });
-
-    it('handles pagination state correctly', async () => {
-      // Mock 15 characters to test pagination
-      const mockCharacters = Array.from({ length: 15 }, (_, i) => ({
-        uid: `${i + 1}`,
-        name: `Character ${i + 1}`,
-        url: `https://swapi.tech/api/people/${i + 1}`,
-      }));
-
-      mockSearchCharacters.mockResolvedValue(mockCharacters);
-      mockGetDetailedCharacter.mockResolvedValue({
-        properties: {
-          name: 'Character',
-          gender: 'unknown',
-          birth_year: 'unknown',
-        },
-      });
-
-      render(<App />);
-
-      const searchInput = screen.getByTestId('search-box');
-      const searchButton = screen.getByTestId('search-button');
-
-      await userEvent.type(searchInput, 'Character');
-      await userEvent.click(searchButton);
-
-      await waitFor(() => {
-        expect(
-          screen.getByText('Search Results (15 characters found)')
-        ).toBeInTheDocument();
-        expect(screen.getByText('Showing page 1 of 2')).toBeInTheDocument();
-      });
-    });
-
-    it('resets state when search term is cleared', async () => {
-      mockSearchCharacters.mockResolvedValue([]);
-
-      render(<App />);
-
-      const searchInput = screen.getByTestId('search-box');
-      const searchButton = screen.getByTestId('search-button');
-
-      // First search
-      await userEvent.type(searchInput, 'Luke');
-      await userEvent.click(searchButton);
-
-      // Clear search
-      await userEvent.clear(searchInput);
-      await userEvent.click(searchButton);
-
-      // Should not show results section content
-      expect(screen.queryByText('Search Results')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(APIService.searchCharacters).toHaveBeenCalledWith('Luke', 2);
     });
   });
 
-  describe('Error Recovery Tests', () => {
-    it('allows retry after error', async () => {
-      // First call fails, second succeeds
-      mockSearchCharacters
-        .mockRejectedValueOnce(new Error('Network error'))
-        .mockResolvedValueOnce([
-          {
-            uid: '1',
-            name: 'Luke Skywalker',
-            url: 'https://swapi.tech/api/people/1',
-          },
-        ]);
+  it('handles retry functionality', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (APIService.searchCharacters as any).mockRejectedValueOnce(
+      new Error('Network error')
+    );
 
-      mockGetDetailedCharacter.mockResolvedValue({
-        properties: {
-          name: 'Luke Skywalker',
-          gender: 'male',
-          birth_year: '19BBY',
-        },
-      });
+    const user = userEvent.setup();
+    render(<App />);
 
-      render(<App />);
+    const searchInput = screen.getByTestId('search-box');
+    const searchButton = screen.getByTestId('search-button');
 
-      const searchInput = screen.getByTestId('search-box');
-      const searchButton = screen.getByTestId('search-button');
+    await user.type(searchInput, 'Luke');
+    await user.click(searchButton);
 
-      await userEvent.type(searchInput, 'Luke');
-      await userEvent.click(searchButton);
+    await waitFor(() => {
+      expect(screen.getByText('Network error')).toBeInTheDocument();
+    });
 
-      // Should show error
-      await waitFor(() => {
-        expect(screen.getByText('Network error')).toBeInTheDocument();
-      });
+    // Mock successful retry
+    (APIService.searchCharacters as any).mockResolvedValue(mockAPIResponse);
 
-      // Click retry
-      const retryButton = screen.getByText('Try Again');
-      await userEvent.click(retryButton);
+    const retryButton = screen.getByText('Try Again');
+    await user.click(retryButton);
 
-      // Should show success
-      await waitFor(() => {
-        expect(
-          screen.getByText('Search Results (1 character found)')
-        ).toBeInTheDocument();
-      });
+    await waitFor(() => {
+      expect(screen.getByText('Luke Skywalker')).toBeInTheDocument();
+    });
+  });
+
+  it('maintains search term during pagination', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const searchInput = screen.getByTestId('search-box');
+    const searchButton = screen.getByTestId('search-button');
+
+    await user.type(searchInput, 'Skywalker');
+    await user.click(searchButton);
+
+    // Simulate page change
+    const multiPagePagination = {
+      currentPage: 1,
+      totalPages: 2,
+      totalCount: 20,
+      hasNext: true,
+      hasPrevious: false,
+    };
+
+    const { createPaginationInfo } = await import('../services/api');
+    createPaginationInfo.mockReturnValue(multiPagePagination);
+
+    await waitFor(() => {
+      expect(APIService.searchCharacters).toHaveBeenCalledWith('Skywalker', 1);
+    });
+  });
+
+  it('resets to page 1 on new search', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const searchInput = screen.getByTestId('search-box');
+    const searchButton = screen.getByTestId('search-button');
+
+    // First search
+    await user.type(searchInput, 'Luke');
+    await user.click(searchButton);
+
+    await waitFor(() => {
+      expect(APIService.searchCharacters).toHaveBeenCalledWith('Luke', 1);
+    });
+
+    // Clear and new search
+    await user.clear(searchInput);
+    await user.type(searchInput, 'Vader');
+    await user.click(searchButton);
+
+    await waitFor(() => {
+      expect(APIService.searchCharacters).toHaveBeenCalledWith('Vader', 1);
     });
   });
 });

@@ -1,56 +1,51 @@
-import { User, ExternalLink, Loader2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { User, Calendar, Ruler, Weight } from 'lucide-react';
 import type { Character } from '../types/Character';
-import { useCharacterCache } from '../hooks/useCharacterCache';
 
 interface CharacterCardProps {
   character: Character;
+  onClick?: (character: Character) => void;
 }
 
-export const CharacterCard = ({ character }: CharacterCardProps) => {
-  const { getDetailedCharacter } = useCharacterCache();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [details, setDetails] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
+const formatDescription = (character: Character): string => {
+  const details = [];
 
-  useEffect(() => {
-    const fetchDetails = async () => {
-      try {
-        const detailedCharacter = await getDetailedCharacter(character.uid);
-        if (detailedCharacter?.properties) {
-          setDetails(detailedCharacter.properties);
-        } else {
-          setError(true);
-        }
-      } catch (error) {
-        console.error('Error fetching character details:', error);
-        setError(true);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  if (character.gender !== 'unknown') {
+    details.push(character.gender);
+  }
 
-    fetchDetails();
-  }, [character.uid, getDetailedCharacter]);
+  if (character.birth_year !== 'unknown') {
+    details.push(`Born ${character.birth_year}`);
+  }
+
+  if (character.height !== 'unknown') {
+    details.push(`${character.height}cm tall`);
+  }
+
+  if (character.mass !== 'unknown') {
+    details.push(`${character.mass}kg`);
+  }
+
+  return details.join(' • ');
+};
+
+export const CharacterCard = ({ character, onClick }: Props) => {
+  const description = formatDescription(character);
+
+  const handleClick = () => {
+    if (onClick) {
+      onClick(character);
+    }
+  };
 
   return (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-200">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-            <User className="w-6 h-6 text-blue-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              {character.name}
-            </h3>
-            {details && (
-              <p className="text-sm text-gray-500">
-                {details.gender} • {details.birth_year}
-              </p>
-            )}
+    <div
+      className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 p-6 border border-gray-200 cursor-pointer hover:border-blue-300 hover:scale-[1.02]"
+      onClick={handleClick}
+    >
+      <div className="flex items-start space-x-4">
+        <div className="flex-shrink-0">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+            <User className="w-6 h-6 text-white" />
           </div>
         </div>
         <Link

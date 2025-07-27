@@ -1,34 +1,30 @@
-import type { Character } from '../types/Character.ts';
+import type { Character, PaginationInfo } from '../types/Character';
 import { CharacterCard } from './CharacterCard';
-import { LoadingSpinner } from './LoadingSpinner.tsx';
-import { ErrorMessage } from './ErrorMessage.tsx';
-import { PaginationControls } from './PaginationControls.tsx';
+import { LoadingSpinner } from './LoadingSpinner';
+import { ErrorMessage } from './ErrorMessage';
+import { Pagination } from './Pagination';
 
-interface Pagination {
-  currentPage: number;
-  totalPages: number;
-  totalCount: number;
-}
-
-interface ResultsSectionProps {
+interface Props {
   characters: Character[];
+  pagination: PaginationInfo | null;
   isLoading: boolean;
   error: string | null;
   onRetry: () => void;
-  pagination: Pagination;
   onPageChange: (page: number) => void;
+  onCharacterClick?: (character: Character) => void;
 }
 
 export const ResultsSection = ({
   characters,
+  pagination,
   isLoading,
   error,
   onRetry,
-  pagination,
   onPageChange,
-}: ResultsSectionProps) => {
+  onCharacterClick,
+}: Props) => {
   return (
-    <div className="flex-1 p-6 bg-gray-50">
+    <div className="flex-1 p-6 bg-gray-50 transition-all duration-300">
       <div className="max-w-4xl mx-auto">
         {isLoading && <LoadingSpinner />}
 
@@ -46,8 +42,14 @@ export const ResultsSection = ({
           <div>
             <div className="mb-6">
               <h2 className="text-xl font-semibold text-gray-900">
-                Search Results ({pagination.totalCount} character
-                {pagination.totalCount !== 1 ? 's' : ''} found)
+                Search Results
+                {pagination && (
+                  <span className="text-gray-600 font-normal">
+                    {' '}
+                    ({pagination.totalCount} character
+                    {pagination.totalCount !== 1 ? 's' : ''} found)
+                  </span>
+                )}
               </h2>
               <p className="text-sm text-gray-500 mt-1">
                 Showing page {pagination.currentPage} of {pagination.totalPages}
@@ -59,15 +61,18 @@ export const ResultsSection = ({
                 <CharacterCard
                   key={`${character.url}-${index}`}
                   character={character}
+                  onClick={onCharacterClick}
                 />
               ))}
             </div>
 
-            <PaginationControls
-              pagination={pagination}
-              onPageChange={onPageChange}
-              isLoading={isLoading}
-            />
+            {pagination && (
+              <Pagination
+                pagination={pagination}
+                onPageChange={onPageChange}
+                isLoading={isLoading}
+              />
+            )}
           </div>
         )}
       </div>
