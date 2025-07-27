@@ -1,84 +1,74 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ResultsSection } from '../ResultsSection';
 import type { Character } from '../../types/Character';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockCharacters: Character[] = [
   {
+    uid: '1',
     name: 'Luke Skywalker',
-    height: '172',
-    mass: '77',
-    hair_color: 'blond',
-    skin_color: 'fair',
-    eye_color: 'blue',
-    birth_year: '19BBY',
-    gender: 'male',
-    homeworld: 'https://swapi.dev/api/planets/1/',
-    films: ['https://swapi.dev/api/films/1/'],
-    species: [],
-    vehicles: ['https://swapi.dev/api/vehicles/14/'],
-    starships: ['https://swapi.dev/api/starships/12/'],
-    created: '2014-12-09T13:50:51.644000Z',
-    edited: '2014-12-20T21:17:56.891000Z',
-    url: 'https://swapi.dev/api/people/1/',
+    url: 'https://swapi.tech/api/people/1',
   },
   {
+    uid: '2',
     name: 'Darth Vader',
-    height: '202',
-    mass: '136',
-    hair_color: 'none',
-    skin_color: 'white',
-    eye_color: 'yellow',
-    birth_year: '41.9BBY',
-    gender: 'male',
-    homeworld: 'https://swapi.dev/api/planets/1/',
-    films: ['https://swapi.dev/api/films/1/'],
-    species: [],
-    vehicles: [],
-    starships: ['https://swapi.dev/api/starships/13/'],
-    created: '2014-12-10T15:18:20.704000Z',
-    edited: '2014-12-20T21:17:50.313000Z',
-    url: 'https://swapi.dev/api/people/4/',
+    url: 'https://swapi.tech/api/people/2',
   },
 ];
 
-describe('ResultsSection', () => {
-  const mockOnRetry = vi.fn();
-  const defaultProps = {
-    characters: [],
-    isLoading: false,
-    error: null,
-    onRetry: mockOnRetry,
-  };
+const mockPagination = {
+  currentPage: 1,
+  totalPages: 2,
+  totalCount: 15,
+};
 
+const mockOnRetry = vi.fn();
+const mockOnPageChange = vi.fn();
+
+// Mock the CharacterCard component to avoid complex dependencies
+vi.mock('../CharacterCard', () => ({
+  CharacterCard: ({ character }: { character: Character }) => (
+    <div data-testid={`character-card-${character.uid}`}>{character.name}</div>
+  ),
+}));
+
+describe('ResultsSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe('Rendering Tests', () => {
     it('renders correct number of items when data is provided', () => {
-      render(<ResultsSection {...defaultProps} characters={mockCharacters} />);
-
-      expect(
-        screen.getByText('Search Results (2 characters)')
-      ).toBeInTheDocument();
-      expect(screen.getByText('Luke Skywalker')).toBeInTheDocument();
-      expect(screen.getByText('Darth Vader')).toBeInTheDocument();
-    });
-
-    it('displays singular form when only one character', () => {
       render(
-        <ResultsSection {...defaultProps} characters={[mockCharacters[0]]} />
+        <ResultsSection
+          characters={mockCharacters}
+          isLoading={false}
+          error={null}
+          onRetry={mockOnRetry}
+          pagination={mockPagination}
+          onPageChange={mockOnPageChange}
+        />
       );
 
+      expect(screen.getByTestId('character-card-1')).toBeInTheDocument();
+      expect(screen.getByTestId('character-card-2')).toBeInTheDocument();
       expect(
-        screen.getByText('Search Results (1 character)')
+        screen.getByText('Search Results (15 characters found)')
       ).toBeInTheDocument();
     });
 
     it('displays "no results" message when data array is empty', () => {
-      render(<ResultsSection {...defaultProps} characters={[]} />);
+      render(
+        <ResultsSection
+          characters={[]}
+          isLoading={false}
+          error={null}
+          onRetry={mockOnRetry}
+          pagination={{ currentPage: 1, totalPages: 1, totalCount: 0 }}
+          onPageChange={mockOnPageChange}
+        />
+      );
 
       expect(
         screen.getByText('No characters found. Try a different search term.')
@@ -86,58 +76,190 @@ describe('ResultsSection', () => {
     });
 
     it('shows loading state while fetching data', () => {
-      render(<ResultsSection {...defaultProps} isLoading={true} />);
+      render(
+        <ResultsSection
+          characters={[]}
+          isLoading={true}
+          error={null}
+          onRetry={mockOnRetry}
+          pagination={mockPagination}
+          onPageChange={mockOnPageChange}
+        />
+      );
 
       expect(screen.getByText('Searching the galaxy...')).toBeInTheDocument();
+      expect(screen.getByRole('status', { hidden: true })).toBeInTheDocument(); // Loading spinner
+    });
+
+    it('displays pagination information correctly', () => {
+      render(
+        <ResultsSection
+          characters={mockCharacters}
+          isLoading={false}
+          error={null}
+          onRetry={mockOnRetry}
+          pagination={mockPagination}
+          onPageChange={mockOnPageChange}
+        />
+      );
+
+      expect(screen.getByText('Showing page 1 of 2')).toBeInTheDocument();
+    });
+
+    it('handles singular character count correctly', () => {
+      render(
+        <ResultsSection
+          characters={[mockCharacters[0]]}
+          isLoading={false}
+          error={null}
+          onRetry={mockOnRetry}
+          pagination={{ currentPage: 1, totalPages: 1, totalCount: 1 }}
+          onPageChange={mockOnPageChange}
+        />
+      );
+
+      expect(
+        screen.getByText('Search Results (1 character found)')
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('Data Display Tests', () => {
+    it('correctly displays character names', () => {
+      render(
+        <ResultsSection
+          characters={mockCharacters}
+          isLoading={false}
+          error={null}
+          onRetry={mockOnRetry}
+          pagination={mockPagination}
+          onPageChange={mockOnPageChange}
+        />
+      );
+
+      expect(screen.getByText('Luke Skywalker')).toBeInTheDocument();
+      expect(screen.getByText('Darth Vader')).toBeInTheDocument();
+    });
+
+    it('handles missing or undefined data gracefully', () => {
+      const charactersWithMissingData: Character[] = [
+        {
+          uid: '1',
+          name: 'Luke Skywalker',
+          url: 'https://swapi.tech/api/people/1',
+        },
+        {
+          uid: '2',
+          name: '',
+          url: '',
+        },
+      ];
+
+      render(
+        <ResultsSection
+          characters={charactersWithMissingData}
+          isLoading={false}
+          error={null}
+          onRetry={mockOnRetry}
+          pagination={mockPagination}
+          onPageChange={mockOnPageChange}
+        />
+      );
+
+      expect(screen.getByTestId('character-card-1')).toBeInTheDocument();
+      expect(screen.getByTestId('character-card-2')).toBeInTheDocument();
     });
   });
 
   describe('Error Handling Tests', () => {
     it('displays error message when API call fails', () => {
       const errorMessage = 'Failed to fetch characters';
-      render(<ResultsSection {...defaultProps} error={errorMessage} />);
+
+      render(
+        <ResultsSection
+          characters={[]}
+          isLoading={false}
+          error={errorMessage}
+          onRetry={mockOnRetry}
+          pagination={mockPagination}
+          onPageChange={mockOnPageChange}
+        />
+      );
 
       expect(screen.getByText('Something went wrong')).toBeInTheDocument();
       expect(screen.getByText(errorMessage)).toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: 'Try Again' })
-      ).toBeInTheDocument();
+      expect(screen.getByText('Try Again')).toBeInTheDocument();
+    });
+
+    it('shows appropriate error for different HTTP status codes', () => {
+      const httpError = 'HTTP error! status: 500';
+
+      render(
+        <ResultsSection
+          characters={[]}
+          isLoading={false}
+          error={httpError}
+          onRetry={mockOnRetry}
+          pagination={mockPagination}
+          onPageChange={mockOnPageChange}
+        />
+      );
+
+      expect(screen.getByText(httpError)).toBeInTheDocument();
     });
 
     it('calls onRetry when retry button is clicked', async () => {
       const user = userEvent.setup();
-      const errorMessage = 'Network error';
-      render(<ResultsSection {...defaultProps} error={errorMessage} />);
 
-      const retryButton = screen.getByRole('button', { name: 'Try Again' });
+      render(
+        <ResultsSection
+          characters={[]}
+          isLoading={false}
+          error="Network error"
+          onRetry={mockOnRetry}
+          pagination={mockPagination}
+          onPageChange={mockOnPageChange}
+        />
+      );
+
+      const retryButton = screen.getByText('Try Again');
       await user.click(retryButton);
 
       expect(mockOnRetry).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('State Priority Tests', () => {
-    it('shows error state over empty results', () => {
+  describe('Pagination Tests', () => {
+    it('renders pagination controls when there are multiple pages', () => {
       render(
-        <ResultsSection {...defaultProps} error="Some error" characters={[]} />
+        <ResultsSection
+          characters={mockCharacters}
+          isLoading={false}
+          error={null}
+          onRetry={mockOnRetry}
+          pagination={mockPagination}
+          onPageChange={mockOnPageChange}
+        />
       );
 
-      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
-      expect(screen.queryByText('No characters found')).not.toBeInTheDocument();
+      expect(screen.getByText('Previous')).toBeInTheDocument();
+      expect(screen.getByText('Next')).toBeInTheDocument();
     });
 
-    it('shows results when no loading or error state', () => {
-      render(<ResultsSection {...defaultProps} characters={mockCharacters} />);
+    it('does not render pagination when there is only one page', () => {
+      render(
+        <ResultsSection
+          characters={mockCharacters}
+          isLoading={false}
+          error={null}
+          onRetry={mockOnRetry}
+          pagination={{ currentPage: 1, totalPages: 1, totalCount: 2 }}
+          onPageChange={mockOnPageChange}
+        />
+      );
 
-      expect(
-        screen.getByText('Search Results (2 characters)')
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByText('Searching the galaxy...')
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByText('Something went wrong')
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText('Previous')).not.toBeInTheDocument();
+      expect(screen.queryByText('Next')).not.toBeInTheDocument();
     });
   });
 });

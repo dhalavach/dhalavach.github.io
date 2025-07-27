@@ -4,6 +4,7 @@ import { ArrowLeft, User, Globe, Calendar, Ruler, Weight } from 'lucide-react';
 import type { Character } from '../types/Character';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
+import { useCharacterCache } from '../hooks/useCharacterCache';
 
 interface CharacterDetailsProps {
   characters: Character[];
@@ -12,6 +13,7 @@ interface CharacterDetailsProps {
 
 export const CharacterDetails = ({ onBack }: CharacterDetailsProps) => {
   const { id } = useParams<{ id: string }>();
+  const { getDetailedCharacter } = useCharacterCache();
   const [character, setCharacter] = useState<Character | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,13 +26,12 @@ export const CharacterDetails = ({ onBack }: CharacterDetailsProps) => {
       setError(null);
 
       try {
-        const response = await fetch(`https://swapi.tech/api/people/${id}`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        const detailedCharacter = await getDetailedCharacter(id);
+        if (detailedCharacter) {
+          setCharacter(detailedCharacter);
+        } else {
+          throw new Error('Character not found');
         }
-
-        const data = await response.json();
-        setCharacter(data.result);
       } catch (error) {
         console.error('Error fetching character details:', error);
         setError(
@@ -44,7 +45,7 @@ export const CharacterDetails = ({ onBack }: CharacterDetailsProps) => {
     };
 
     fetchCharacterDetails();
-  }, [id]);
+  }, [id, getDetailedCharacter]);
 
   const handleRetry = () => {
     if (id) {

@@ -1,8 +1,9 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Component that throws an error for testing
 const ThrowError = ({ shouldThrow }: { shouldThrow: boolean }) => {
   if (shouldThrow) {
     throw new Error('Test error');
@@ -10,34 +11,27 @@ const ThrowError = ({ shouldThrow }: { shouldThrow: boolean }) => {
   return <div>No error</div>;
 };
 
-Object.defineProperty(window, 'location', {
-  value: {
-    reload: vi.fn(),
-  },
-  writable: true,
-});
+// Component with a button that throws an error when clicked
+const ErrorButton = () => {
+  const throwError = () => {
+    throw new Error('Button click error');
+  };
+
+  return (
+    <button onClick={throwError} data-testid="error-button">
+      Throw Error
+    </button>
+  );
+};
 
 describe('ErrorBoundary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock console.error to avoid noise in test output
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   describe('Error Catching Tests', () => {
-    it('renders children when there is no error', () => {
-      render(
-        <ErrorBoundary>
-          <ThrowError shouldThrow={false} />
-        </ErrorBoundary>
-      );
-
-      expect(screen.getByText('No error')).toBeInTheDocument();
-    });
-
     it('catches and handles JavaScript errors in child components', () => {
       render(
         <ErrorBoundary>
@@ -46,7 +40,7 @@ describe('ErrorBoundary', () => {
       );
 
       expect(screen.getByText('Something went wrong')).toBeInTheDocument();
-      expect(screen.queryByText('No error')).not.toBeInTheDocument();
+      expect(screen.getByText('Test error')).toBeInTheDocument();
     });
 
     it('displays fallback UI when error occurs', () => {
@@ -58,19 +52,13 @@ describe('ErrorBoundary', () => {
 
       expect(screen.getByText('Something went wrong')).toBeInTheDocument();
       expect(
-        screen.getByText(
-          'The application encountered an unexpected error. Please refresh the page to try again.'
-        )
+        screen.getByRole('button', { name: /try again/i })
       ).toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: 'Refresh Page' })
-      ).toBeInTheDocument();
+      expect(screen.queryByText('No error')).not.toBeInTheDocument();
     });
 
     it('logs error to console', () => {
-      const consoleSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error');
 
       render(
         <ErrorBoundary>
@@ -80,37 +68,78 @@ describe('ErrorBoundary', () => {
 
       expect(consoleSpy).toHaveBeenCalled();
     });
-  });
 
-  describe('Error UI Tests', () => {
-    it('displays error details when available', () => {
+    it('renders children normally when no error occurs', () => {
       render(
         <ErrorBoundary>
-          <ThrowError shouldThrow={true} />
+          <ThrowError shouldThrow={false} />
         </ErrorBoundary>
       );
 
-      expect(screen.getByText('Error Details')).toBeInTheDocument();
+      expect(screen.getByText('No error')).toBeInTheDocument();
+      expect(
+        screen.queryByText('Something went wrong')
+      ).not.toBeInTheDocument();
     });
 
-    it('shows error message in details section', () => {
+    it('displays generic error message when error has no message', () => {
+      const ErrorWithoutMessage = () => {
+        throw new Error();
+      };
+
       render(
         <ErrorBoundary>
-          <ThrowError shouldThrow={true} />
+          <ErrorWithoutMessage />
         </ErrorBoundary>
       );
 
-      const details = screen.getByRole('group');
-      expect(details).toBeInTheDocument();
+      expect(
+        screen.getByText('An unexpected error occurred')
+      ).toBeInTheDocument();
     });
   });
 
-  describe('Refresh Functionality Tests', () => {
-    it('calls window.location.reload when refresh button is clicked', async () => {
+  describe('Error Button Tests', () => {
+    it('throws error when test button is clicked', async () => {
       const user = userEvent.setup();
-      const reloadSpy = vi
-        .spyOn(window.location, 'reload')
-        .mockImplementation(() => {});
+
+      render(
+        <ErrorBoundary>
+          <ErrorButton />
+        </ErrorBoundary>
+      );
+
+      const errorButton = screen.getByTestId('error-button');
+      await user.click(errorButton);
+
+      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+      expect(screen.getByText('Button click error')).toBeInTheDocument();
+    });
+
+    it('triggers error boundary fallback UI after button click', async () => {
+      const user = userEvent.setup();
+
+      render(
+        <ErrorBoundary>
+          <ErrorButton />
+        </ErrorBoundary>
+      );
+
+      // Initially, the error button should be visible
+      expect(screen.getByTestId('error-button')).toBeInTheDocument();
+
+      const errorButton = screen.getByTestId('error-button');
+      await user.click(errorButton);
+
+      // After error, fallback UI should be shown
+      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+      expect(screen.queryByTestId('error-button')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Reset Functionality', () => {
+    it('resets error state when try again button is clicked', async () => {
+      const user = userEvent.setup();
 
       render(
         <ErrorBoundary>
@@ -118,70 +147,38 @@ describe('ErrorBoundary', () => {
         </ErrorBoundary>
       );
 
-      const refreshButton = screen.getByRole('button', {
-        name: 'Refresh Page',
-      });
-      await user.click(refreshButton);
+      // Error should be displayed
+      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
 
-      expect(reloadSpy).toHaveBeenCalledTimes(1);
-    });
-  });
+      const tryAgainButton = screen.getByRole('button', { name: /try again/i });
+      await user.click(tryAgainButton);
 
-  describe('Styling Tests', () => {
-    it('applies correct styling classes', () => {
-      const { container } = render(
-        <ErrorBoundary>
-          <ThrowError shouldThrow={true} />
-        </ErrorBoundary>
-      );
-
-      const errorContainer = container.firstChild as HTMLElement;
-      expect(errorContainer).toHaveClass(
-        'min-h-screen',
-        'bg-gray-900',
-        'flex',
-        'items-center',
-        'justify-center'
-      );
+      // After reset, the component should try to render children again
+      // Since ThrowError still throws, it should show error again
+      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
     });
 
-    it('applies correct button styling', () => {
+    it('has correct styling for error boundary UI', () => {
       render(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
       );
 
-      const refreshButton = screen.getByRole('button', {
-        name: 'Refresh Page',
-      });
-      expect(refreshButton).toHaveClass(
-        'bg-blue-600',
-        'text-white',
-        'px-6',
-        'py-2',
-        'rounded-md'
-      );
+      const container = screen.getByText('Something went wrong').closest('div');
+      expect(container).toHaveClass('bg-white', 'rounded-lg', 'shadow-lg');
     });
-  });
 
-  describe('Error State Management', () => {
-    it('maintains error state after error occurs', () => {
-      const { rerender } = render(
+    it('displays error icon in fallback UI', () => {
+      render(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
       );
 
-      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
-
-      rerender(
-        <ErrorBoundary>
-          <ThrowError shouldThrow={true} />
-        </ErrorBoundary>
-      );
-
-      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+      // The AlertTriangle icon should be present
+      const errorIcon = screen.getByRole('img', { hidden: true });
+      expect(errorIcon).toBeInTheDocument();
     });
   });
 });

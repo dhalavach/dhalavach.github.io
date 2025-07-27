@@ -1,121 +1,99 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ErrorMessage } from '../ErrorMessage';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockOnRetry = vi.fn();
 
 describe('ErrorMessage', () => {
-  const defaultProps = {
-    message: 'Something went wrong',
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe('Rendering Tests', () => {
     it('displays error message correctly', () => {
-      render(<ErrorMessage {...defaultProps} />);
+      const errorMessage = 'Failed to fetch data';
 
-      expect(screen.getAllByText('Something went wrong')).not.toHaveLength(0);
+      render(<ErrorMessage message={errorMessage} onRetry={mockOnRetry} />);
+
+      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+      expect(screen.getByText(errorMessage)).toBeInTheDocument();
     });
 
-    it('displays error title', () => {
-      render(<ErrorMessage {...defaultProps} />);
+    it('renders retry button', () => {
+      render(<ErrorMessage message="Error occurred" onRetry={mockOnRetry} />);
 
-      expect(screen.getAllByText('Something went wrong')).not.toHaveLength(0);
+      const retryButton = screen.getByRole('button', { name: /try again/i });
+      expect(retryButton).toBeInTheDocument();
     });
 
-    it('renders retry button when onRetry prop is provided', () => {
-      const mockOnRetry = vi.fn();
-      render(<ErrorMessage {...defaultProps} onRetry={mockOnRetry} />);
+    it('displays error icon', () => {
+      render(<ErrorMessage message="Error occurred" onRetry={mockOnRetry} />);
 
-      expect(
-        screen.getByRole('button', { name: 'Try Again' })
-      ).toBeInTheDocument();
+      // The AlertCircle icon should be present
+      const errorIcon = screen.getByRole('img', { hidden: true });
+      expect(errorIcon).toBeInTheDocument();
     });
 
-    it('does not render retry button when onRetry prop is not provided', () => {
-      render(<ErrorMessage {...defaultProps} />);
+    it('has correct styling classes', () => {
+      render(<ErrorMessage message="Error occurred" onRetry={mockOnRetry} />);
 
-      expect(
-        screen.queryByRole('button', { name: 'Try Again' })
-      ).not.toBeInTheDocument();
+      const container = screen.getByText('Something went wrong').closest('div');
+      expect(container).toHaveClass(
+        'bg-red-50',
+        'border',
+        'border-red-200',
+        'rounded-lg'
+      );
     });
   });
 
   describe('User Interaction Tests', () => {
     it('calls onRetry when retry button is clicked', async () => {
       const user = userEvent.setup();
-      const mockOnRetry = vi.fn();
-      render(<ErrorMessage {...defaultProps} onRetry={mockOnRetry} />);
 
-      const retryButton = screen.getByRole('button', { name: 'Try Again' });
+      render(<ErrorMessage message="Error occurred" onRetry={mockOnRetry} />);
+
+      const retryButton = screen.getByRole('button', { name: /try again/i });
       await user.click(retryButton);
 
       expect(mockOnRetry).toHaveBeenCalledTimes(1);
     });
 
-    it('handles multiple clicks on retry button', async () => {
-      const user = userEvent.setup();
-      const mockOnRetry = vi.fn();
-      render(<ErrorMessage {...defaultProps} onRetry={mockOnRetry} />);
+    it('retry button has correct styling on hover', () => {
+      render(<ErrorMessage message="Error occurred" onRetry={mockOnRetry} />);
 
-      const retryButton = screen.getByRole('button', { name: 'Try Again' });
-      await user.click(retryButton);
-      await user.click(retryButton);
-
-      expect(mockOnRetry).toHaveBeenCalledTimes(2);
+      const retryButton = screen.getByRole('button', { name: /try again/i });
+      expect(retryButton).toHaveClass('hover:bg-red-700');
     });
   });
 
-  describe('Message Display Tests', () => {
-    it('displays custom error messages', () => {
-      const customMessage = 'Network connection failed';
-      render(<ErrorMessage message={customMessage} />);
-
-      expect(screen.getByText(customMessage)).toBeInTheDocument();
-    });
-
-    it('displays long error messages correctly', () => {
+  describe('Error Display Tests', () => {
+    it('handles long error messages', () => {
       const longMessage =
-        'This is a very long error message that should be displayed correctly even when it contains multiple sentences and detailed information about what went wrong.';
-      render(<ErrorMessage message={longMessage} />);
+        'This is a very long error message that should still be displayed correctly without breaking the layout or causing any issues with the component rendering';
+
+      render(<ErrorMessage message={longMessage} onRetry={mockOnRetry} />);
 
       expect(screen.getByText(longMessage)).toBeInTheDocument();
     });
 
     it('handles empty error message', () => {
-      render(<ErrorMessage message="" />);
+      render(<ErrorMessage message="" onRetry={mockOnRetry} />);
 
       expect(screen.getByText('Something went wrong')).toBeInTheDocument();
-    });
-  });
-
-  describe('Styling Tests', () => {
-    it('applies correct CSS classes', () => {
-      const { container } = render(<ErrorMessage {...defaultProps} />);
-
-      const mainContainer = container.firstChild as HTMLElement;
-      expect(mainContainer).toHaveClass(
-        'flex',
-        'flex-col',
-        'items-center',
-        'justify-center'
-      );
+      // Empty message should still render without breaking
+      expect(
+        screen.getByRole('button', { name: /try again/i })
+      ).toBeInTheDocument();
     });
 
-    it('applies correct button styling when retry is available', () => {
-      const mockOnRetry = vi.fn();
-      render(<ErrorMessage {...defaultProps} onRetry={mockOnRetry} />);
+    it('handles special characters in error message', () => {
+      const specialMessage = 'Error: HTTP 404 - Resource not found! @#$%^&*()';
 
-      const retryButton = screen.getByRole('button', { name: 'Try Again' });
-      expect(retryButton).toHaveClass(
-        'bg-blue-600',
-        'text-white',
-        'px-6',
-        'py-2',
-        'rounded-md'
-      );
+      render(<ErrorMessage message={specialMessage} onRetry={mockOnRetry} />);
+
+      expect(screen.getByText(specialMessage)).toBeInTheDocument();
     });
   });
 });
