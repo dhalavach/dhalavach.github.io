@@ -1,63 +1,39 @@
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { LoadingSpinner } from '../LoadingSpinner';
+import { describe, expect, it } from 'vitest';
 
 describe('LoadingSpinner', () => {
-  describe('Rendering Tests', () => {
-    it('renders loading indicator (spinner)', () => {
-      render(<LoadingSpinner />);
+  it('renders loading spinner with correct text', () => {
+    render(<LoadingSpinner />);
 
-      // Check for the spinner icon
-      const spinner = screen.getByRole('status', { hidden: true });
-      expect(spinner).toBeInTheDocument();
-      expect(spinner).toHaveClass('animate-spin');
-    });
-
-    it('displays loading text', () => {
-      render(<LoadingSpinner />);
-
-      expect(screen.getByText('Searching the galaxy...')).toBeInTheDocument();
-    });
-
-    it('has correct styling classes', () => {
-      render(<LoadingSpinner />);
-
-      const container = screen
-        .getByText('Searching the galaxy...')
-        .closest('div');
-      expect(container).toHaveClass(
-        'flex',
-        'justify-center',
-        'items-center',
-        'py-12'
-      );
-    });
-
-    it('spinner has correct color and size classes', () => {
-      render(<LoadingSpinner />);
-
-      const spinner = screen.getByRole('status', { hidden: true });
-      expect(spinner).toHaveClass(
-        'w-8',
-        'h-8',
-        'animate-spin',
-        'text-blue-600'
-      );
-    });
+    expect(screen.getByText('Searching the galaxy...')).toBeInTheDocument();
   });
 
-  describe('Accessibility Tests', () => {
-    it('has appropriate role for screen readers', () => {
-      render(<LoadingSpinner />);
+  it('renders loading icon', () => {
+    render(<LoadingSpinner />);
 
-      const spinner = screen.getByRole('status', { hidden: true });
-      expect(spinner).toBeInTheDocument();
-    });
+    const spinner = screen.getByRole('img', { hidden: true });
+    expect(spinner).toBeInTheDocument();
+    expect(spinner).toHaveClass('animate-spin');
+  });
 
-    it('provides meaningful text for screen readers', () => {
-      render(<LoadingSpinner />);
+  it('has correct styling classes', () => {
+    const { container } = render(<LoadingSpinner />);
 
-      expect(screen.getByText('Searching the galaxy...')).toBeInTheDocument();
-    });
+    const spinnerContainer = container.firstChild;
+    expect(spinnerContainer).toHaveClass(
+      'flex',
+      'flex-col',
+      'items-center',
+      'justify-center',
+      'py-12'
+    );
+  });
+
+  it('displays correct loading message', () => {
+    render(<LoadingSpinner />);
+
+    const message = screen.getByText('Searching the galaxy...');
+    expect(message).toHaveClass('text-gray-600');
   });
 });

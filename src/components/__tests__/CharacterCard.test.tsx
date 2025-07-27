@@ -1,110 +1,145 @@
-import { User, ExternalLink, Loader2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import type { Character } from '../../types/Character.ts';
-import { useCharacterCache } from '../../hooks/useCharacterCache';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { CharacterCard } from '../CharacterCard';
+import type { Character } from '../../types/Character';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-interface CharacterCardProps {
-  character: Character;
-}
+const mockCharacter: Character = {
+  name: 'Luke Skywalker',
+  height: '172',
+  mass: '77',
+  hair_color: 'blond',
+  skin_color: 'fair',
+  eye_color: 'blue',
+  birth_year: '19BBY',
+  gender: 'male',
+  homeworld: 'https://swapi.dev/api/planets/1/',
+  films: ['https://swapi.dev/api/films/1/'],
+  species: [],
+  vehicles: ['https://swapi.dev/api/vehicles/14/'],
+  starships: ['https://swapi.dev/api/starships/12/'],
+  created: '2014-12-09T13:50:51.644000Z',
+  edited: '2014-12-20T21:17:56.891000Z',
+  url: 'https://swapi.dev/api/people/1/',
+};
 
-export const CharacterCard = ({ character }: CharacterCardProps) => {
-  const { getDetailedCharacter } = useCharacterCache();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [details, setDetails] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
+const mockOnClick = vi.fn();
 
-  useEffect(() => {
-    const fetchDetails = async () => {
-      try {
-        const detailedCharacter = await getDetailedCharacter(character.uid);
-        if (detailedCharacter?.properties) {
-          setDetails(detailedCharacter.properties);
-        } else {
-          setError(true);
-        }
-      } catch (error) {
-        console.error('Error fetching character details:', error);
-        setError(true);
-      } finally {
-        setIsLoading(false);
-      }
+describe('CharacterCard', () => {
+  beforeEach(() => {
+    mockOnClick.mockClear();
+  });
+
+  it('renders character information correctly', () => {
+    render(<CharacterCard character={mockCharacter} />);
+
+    expect(screen.getByText('Luke Skywalker')).toBeInTheDocument();
+    expect(
+      screen.getByText(/male.*Born 19BBY.*172cm tall.*77kg/)
+    ).toBeInTheDocument();
+    expect(screen.getByText('172cm')).toBeInTheDocument();
+    expect(screen.getByText('77kg')).toBeInTheDocument();
+    expect(screen.getByText('19BBY')).toBeInTheDocument();
+  });
+
+  it('handles unknown values correctly', () => {
+    const characterWithUnknowns: Character = {
+      ...mockCharacter,
+      height: 'unknown',
+      mass: 'unknown',
+      birth_year: 'unknown',
+      gender: 'unknown',
     };
 
-    fetchDetails();
-  }, [character.uid, getDetailedCharacter]);
+    render(<CharacterCard character={characterWithUnknowns} />);
 
-  return (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-200">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-            <User className="w-6 h-6 text-blue-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              {character.name}
-            </h3>
-            {details && (
-              <p className="text-sm text-gray-500">
-                {details.gender} • {details.birth_year}
-              </p>
-            )}
-          </div>
-        </div>
-        <Link
-          to={`/character/${character.uid}`}
-          className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors text-sm font-medium"
-        >
-          View Details
-          <ExternalLink className="w-4 h-4" />
-        </Link>
-      </div>
+    expect(screen.getByText('Luke Skywalker')).toBeInTheDocument();
+    // Should not display unknown values in the description
+    expect(screen.queryByText(/unknown/)).not.toBeInTheDocument();
+  });
 
-      {isLoading && (
-        <div className="flex items-center justify-center py-4">
-          <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-          <span className="ml-2 text-sm text-gray-500">Loading details...</span>
-        </div>
-      )}
+  it('calls onClick when card is clicked', () => {
+    render(<CharacterCard character={mockCharacter} onClick={mockOnClick} />);
 
-      {error && (
-        <div className="text-sm text-gray-500 py-2">
-          <p>Unable to load character details</p>
-        </div>
-      )}
+    const card = screen.getByText('Luke Skywalker').closest('div');
+    if (card) {
+      fireEvent.click(card);
+      expect(mockOnClick).toHaveBeenCalledWith(mockCharacter);
+    }
+  });
 
-      {details && !isLoading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <div>
-            <span className="font-medium text-gray-700">Height:</span>
-            <span className="ml-1 text-gray-600">
-              {details.height === 'unknown'
-                ? 'Unknown'
-                : `${details.height} cm`}
-            </span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Mass:</span>
-            <span className="ml-1 text-gray-600">
-              {details.mass === 'unknown' ? 'Unknown' : `${details.mass} kg`}
-            </span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Eye Color:</span>
-            <span className="ml-1 text-gray-600 capitalize">
-              {details.eye_color}
-            </span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Hair Color:</span>
-            <span className="ml-1 text-gray-600 capitalize">
-              {details.hair_color}
-            </span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+  it('does not call onClick when no onClick prop is provided', () => {
+    render(<CharacterCard character={mockCharacter} />);
+
+    const card = screen.getByText('Luke Skywalker').closest('div');
+    if (card) {
+      fireEvent.click(card);
+      // Should not throw an error
+    }
+  });
+
+  it('displays only available character details', () => {
+    const minimalCharacter: Character = {
+      ...mockCharacter,
+      height: 'unknown',
+      mass: 'unknown',
+      birth_year: 'unknown',
+      gender: 'female',
+    };
+
+    render(<CharacterCard character={minimalCharacter} />);
+
+    expect(screen.getByText('Luke Skywalker')).toBeInTheDocument();
+    expect(screen.getByText('female')).toBeInTheDocument();
+    expect(screen.queryByText('172cm')).not.toBeInTheDocument();
+    expect(screen.queryByText('77kg')).not.toBeInTheDocument();
+    expect(screen.queryByText('19BBY')).not.toBeInTheDocument();
+  });
+
+  it('has proper hover styles and cursor pointer', () => {
+    render(<CharacterCard character={mockCharacter} onClick={mockOnClick} />);
+
+    const card = screen.getByText('Luke Skywalker').closest('div');
+    expect(card).toHaveClass('cursor-pointer');
+    expect(card).toHaveClass('hover:shadow-lg');
+    expect(card).toHaveClass('hover:border-blue-300');
+  });
+
+  it('renders character avatar', () => {
+    render(<CharacterCard character={mockCharacter} />);
+
+    const avatar = screen.getByRole('img', { hidden: true });
+    expect(avatar).toBeInTheDocument();
+  });
+
+  it('handles character with no description details', () => {
+    const emptyCharacter: Character = {
+      ...mockCharacter,
+      gender: 'unknown',
+      birth_year: 'unknown',
+      height: 'unknown',
+      mass: 'unknown',
+    };
+
+    render(<CharacterCard character={emptyCharacter} />);
+
+    expect(screen.getByText('Luke Skywalker')).toBeInTheDocument();
+    // Should still render the card even with no description
+    const card = screen.getByText('Luke Skywalker').closest('div');
+    expect(card).toBeInTheDocument();
+  });
+
+  it('formats description correctly with partial data', () => {
+    const partialCharacter: Character = {
+      ...mockCharacter,
+      mass: 'unknown',
+      birth_year: 'unknown',
+    };
+
+    render(<CharacterCard character={partialCharacter} />);
+
+    expect(screen.getByText('Luke Skywalker')).toBeInTheDocument();
+    expect(screen.getByText(/male.*172cm tall/)).toBeInTheDocument();
+    expect(screen.queryByText(/77kg/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/19BBY/)).not.toBeInTheDocument();
+  });
+});

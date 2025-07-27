@@ -1166,34 +1166,34 @@ export class APIService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-//       const response = await fetch(url, {
-//         method: 'GET',
-//         headers: {
-//           Accept: 'application/json',
-//           'Content-Type': 'application/json',
-//         },
-//         signal: controller.signal,
-//       });
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
 
-//       clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
 
-//       if (!response.ok) {
-//         if (response.status >= 400 && response.status < 500) {
-//           throw new Error(
-//             `Client error (${response.status}): ${response.statusText}. Please check your request and try again.`
-//           );
-//         }
+      if (!response.ok) {
+        if (response.status >= 400 && response.status < 500) {
+          throw new Error(
+            `Client error (${response.status}): ${response.statusText}. Please check your request and try again.`
+          );
+        }
 
-//         if (response.status >= 500) {
-//           throw new Error(
-//             `Server error (${response.status}): ${response.statusText}. The service is temporarily unavailable.`
-//           );
-//         }
+        if (response.status >= 500) {
+          throw new Error(
+            `Server error (${response.status}): ${response.statusText}. The service is temporarily unavailable.`
+          );
+        }
 
-//         throw new Error(
-//           `Request failed with status ${response.status}: ${response.statusText}`
-//         );
-//       }
+        throw new Error(
+          `Request failed with status ${response.status}: ${response.statusText}`
+        );
+      }
 
       const data = await response.json();
       return data;
@@ -1237,10 +1237,10 @@ export class APIService {
           return createMockResponse(searchTerm, page);
         }
 
-//         throw error;
-//       }
+        throw error;
+      }
 
-//       throw new Error('An unexpected error occurred while fetching data.');
-//     }
-//   }
-// }
+      throw new Error('An unexpected error occurred while fetching data.');
+    }
+  }
+}

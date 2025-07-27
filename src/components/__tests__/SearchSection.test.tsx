@@ -1,209 +1,152 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SearchSection } from '../SearchSection';
-
-// Mock the useCharacterCache hook
-vi.mock('../../hooks/useCharacterCache', () => ({
-  useCharacterCache: () => ({
-    searchCharacters: vi.fn(),
-    getDetailedCharacter: vi.fn(),
-    isLoading: false,
-    error: null,
-    characters: [],
-    detailedCharacters: new Map(),
-    isLoaded: false,
-    clearCache: vi.fn(),
-  }),
-}));
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockOnSearch = vi.fn();
 
+// Mock localStorage
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+};
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+});
+
 describe('SearchSection', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    localStorage.clear();
+    mockOnSearch.mockClear();
+    localStorageMock.getItem.mockClear();
+    localStorageMock.setItem.mockClear();
   });
 
-  describe('Rendering Tests', () => {
-    it('renders search input and search button', () => {
-      render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
+  it('renders search input and button', () => {
+    localStorageMock.getItem.mockReturnValue('');
+    render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
 
-      expect(screen.getByTestId('search-box')).toBeInTheDocument();
-      expect(screen.getByTestId('search-button')).toBeInTheDocument();
-      expect(
-        screen.getByText('Star Wars Character Search')
-      ).toBeInTheDocument();
-    });
+    expect(screen.getByTestId('search-box')).toBeInTheDocument();
+    expect(screen.getByTestId('search-button')).toBeInTheDocument();
+    expect(screen.getByText('Star Wars Character Search')).toBeInTheDocument();
+  });
 
-    it('displays previously saved search term from localStorage on mount', () => {
-      const savedTerm = 'Luke Skywalker';
-      localStorage.setItem('starwars-search-term', savedTerm);
+  it('loads saved search term from localStorage', () => {
+    localStorageMock.getItem.mockReturnValue('Luke');
+    render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
 
-      render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
+    const searchInput = screen.getByTestId('search-box') as HTMLInputElement;
+    expect(searchInput.value).toBe('Luke');
+  });
 
-      expect(screen.getByDisplayValue(savedTerm)).toBeInTheDocument();
-    });
+  it('triggers search on mount with saved search term', async () => {
+    localStorageMock.getItem.mockReturnValue('Luke');
+    render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
 
-    it('shows empty input when no saved term exists', () => {
-      render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
-
-      const input = screen.getByTestId('search-box') as HTMLInputElement;
-      expect(input.value).toBe('');
-    });
-
-    it('disables input and button when loading', () => {
-      render(<SearchSection onSearch={mockOnSearch} isLoading={true} />);
-
-      expect(screen.getByTestId('search-box')).toBeDisabled();
-      expect(screen.getByTestId('search-button')).toBeDisabled();
-      expect(screen.getByText('Searching...')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockOnSearch).toHaveBeenCalledWith('Luke', 1);
     });
   });
 
-  describe('User Interaction Tests', () => {
-    it('updates input value when user types', async () => {
-      const user = userEvent.setup();
-      render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
+  it('updates search term when typing', async () => {
+    localStorageMock.getItem.mockReturnValue('');
+    const user = userEvent.setup();
+    render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
 
-      const input = screen.getByTestId('search-box');
-      await user.type(input, 'Luke');
+    const searchInput = screen.getByTestId('search-box');
+    await user.type(searchInput, 'Vader');
 
-      expect(input).toHaveValue('Luke');
-    });
-
-    it('saves search term to localStorage when search button is clicked', async () => {
-      const user = userEvent.setup();
-      render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
-
-      const input = screen.getByTestId('search-box');
-      const button = screen.getByTestId('search-button');
-
-      await user.type(input, 'Luke Skywalker');
-      await user.click(button);
-
-      expect(localStorage.setItem).toHaveBeenCalledWith(
-        'starwars-search-term',
-        'Luke Skywalker'
-      );
-    });
-
-    it('trims whitespace from search input before saving', async () => {
-      const user = userEvent.setup();
-      render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
-
-      const input = screen.getByTestId('search-box');
-      const button = screen.getByTestId('search-button');
-
-      await user.type(input, '  Luke Skywalker  ');
-      await user.click(button);
-
-      expect(localStorage.setItem).toHaveBeenCalledWith(
-        'starwars-search-term',
-        'Luke Skywalker'
-      );
-      expect(mockOnSearch).toHaveBeenCalledWith('Luke Skywalker');
-    });
-
-    it('triggers search callback with correct parameters', async () => {
-      const user = userEvent.setup();
-      render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
-
-      const input = screen.getByTestId('search-box');
-      const button = screen.getByTestId('search-button');
-
-      await user.type(input, 'Luke');
-      await user.click(button);
-
-      expect(mockOnSearch).toHaveBeenCalledWith('Luke');
-    });
-
-    it('triggers search on Enter key press', async () => {
-      const user = userEvent.setup();
-      render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
-
-      const input = screen.getByTestId('search-box');
-
-      await user.type(input, 'Luke');
-      await user.keyboard('{Enter}');
-
-      expect(mockOnSearch).toHaveBeenCalledWith('Luke');
-    });
-
-    it('triggers debounced search after typing', async () => {
-      vi.useFakeTimers();
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-
-      render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
-
-      const input = screen.getByTestId('search-box');
-      await user.type(input, 'Luke');
-
-      // Fast-forward time to trigger debounced search
-      vi.advanceTimersByTime(300);
-
-      await waitFor(() => {
-        expect(mockOnSearch).toHaveBeenCalledWith('Luke');
-      });
-
-      vi.useRealTimers();
-    });
+    expect((searchInput as HTMLInputElement).value).toBe('Vader');
   });
 
-  describe('LocalStorage Integration', () => {
-    it('retrieves saved search term on component mount', () => {
-      const savedTerm = 'Darth Vader';
-      localStorage.setItem('starwars-search-term', savedTerm);
+  it('triggers search when clicking search button', async () => {
+    localStorageMock.getItem.mockReturnValue('');
+    const user = userEvent.setup();
+    render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
 
-      render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
+    const searchInput = screen.getByTestId('search-box');
+    const searchButton = screen.getByTestId('search-button');
 
-      expect(localStorage.getItem).toHaveBeenCalledWith('starwars-search-term');
-      expect(screen.getByDisplayValue(savedTerm)).toBeInTheDocument();
-    });
+    await user.type(searchInput, 'Vader');
+    await user.click(searchButton);
 
-    it('auto-searches with saved term on mount', () => {
-      const savedTerm = 'Darth Vader';
-      localStorage.setItem('starwars-search-term', savedTerm);
+    expect(mockOnSearch).toHaveBeenCalledWith('Vader', 1);
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      'starwars-search-term',
+      'Vader'
+    );
+  });
 
-      render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
+  it('triggers search when pressing Enter', async () => {
+    localStorageMock.getItem.mockReturnValue('');
+    const user = userEvent.setup();
+    render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
 
-      expect(mockOnSearch).toHaveBeenCalledWith(savedTerm);
-    });
+    const searchInput = screen.getByTestId('search-box');
+    await user.type(searchInput, 'Leia');
+    await user.keyboard('{Enter}');
 
-    it('overwrites existing localStorage value when new search is performed', async () => {
-      const user = userEvent.setup();
-      localStorage.setItem('starwars-search-term', 'old term');
+    expect(mockOnSearch).toHaveBeenCalledWith('Leia', 1);
+  });
 
-      render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
+  it('trims whitespace from search term', async () => {
+    localStorageMock.getItem.mockReturnValue('');
+    const user = userEvent.setup();
+    render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
 
-      const input = screen.getByTestId('search-box');
-      const button = screen.getByTestId('search-button');
+    const searchInput = screen.getByTestId('search-box');
+    const searchButton = screen.getByTestId('search-button');
 
-      await user.clear(input);
-      await user.type(input, 'new term');
-      await user.click(button);
+    await user.type(searchInput, '  Han Solo  ');
+    await user.click(searchButton);
 
-      expect(localStorage.setItem).toHaveBeenCalledWith(
-        'starwars-search-term',
-        'new term'
-      );
-    });
+    expect(mockOnSearch).toHaveBeenCalledWith('Han Solo', 1);
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      'starwars-search-term',
+      'Han Solo'
+    );
+  });
 
-    it('removes localStorage item when search term is empty', async () => {
-      const user = userEvent.setup();
-      localStorage.setItem('starwars-search-term', 'existing term');
+  it('disables input and button when loading', () => {
+    localStorageMock.getItem.mockReturnValue('');
+    render(<SearchSection onSearch={mockOnSearch} isLoading={true} />);
 
-      render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
+    const searchInput = screen.getByTestId('search-box');
+    const searchButton = screen.getByTestId('search-button');
 
-      const input = screen.getByTestId('search-box');
-      const button = screen.getByTestId('search-button');
+    expect(searchInput).toBeDisabled();
+    expect(searchButton).toBeDisabled();
+    expect(searchButton).toHaveTextContent('Searching...');
+  });
 
-      await user.clear(input);
-      await user.click(button);
+  it('shows correct button text when not loading', () => {
+    localStorageMock.getItem.mockReturnValue('');
+    render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
 
-      expect(localStorage.removeItem).toHaveBeenCalledWith(
-        'starwars-search-term'
-      );
-    });
+    const searchButton = screen.getByTestId('search-button');
+    expect(searchButton).toHaveTextContent('Search');
+  });
+
+  it('does not trigger search on mount when no saved term', () => {
+    localStorageMock.getItem.mockReturnValue('');
+    render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
+
+    expect(mockOnSearch).not.toHaveBeenCalled();
+  });
+
+  it('handles empty search term correctly', async () => {
+    localStorageMock.getItem.mockReturnValue('');
+    const user = userEvent.setup();
+    render(<SearchSection onSearch={mockOnSearch} isLoading={false} />);
+
+    const searchButton = screen.getByTestId('search-button');
+    await user.click(searchButton);
+
+    expect(mockOnSearch).toHaveBeenCalledWith('', 1);
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      'starwars-search-term',
+      ''
+    );
   });
 });

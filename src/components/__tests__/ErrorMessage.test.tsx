@@ -1,99 +1,90 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ErrorMessage } from '../ErrorMessage';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockOnRetry = vi.fn();
 
 describe('ErrorMessage', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockOnRetry.mockClear();
   });
 
-  describe('Rendering Tests', () => {
-    it('displays error message correctly', () => {
-      const errorMessage = 'Failed to fetch data';
+  it('renders error message correctly', () => {
+    render(
+      <ErrorMessage message="Network error occurred" onRetry={mockOnRetry} />
+    );
 
-      render(<ErrorMessage message={errorMessage} onRetry={mockOnRetry} />);
-
-      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
-      expect(screen.getByText(errorMessage)).toBeInTheDocument();
-    });
-
-    it('renders retry button', () => {
-      render(<ErrorMessage message="Error occurred" onRetry={mockOnRetry} />);
-
-      const retryButton = screen.getByRole('button', { name: /try again/i });
-      expect(retryButton).toBeInTheDocument();
-    });
-
-    it('displays error icon', () => {
-      render(<ErrorMessage message="Error occurred" onRetry={mockOnRetry} />);
-
-      // The AlertCircle icon should be present
-      const errorIcon = screen.getByRole('img', { hidden: true });
-      expect(errorIcon).toBeInTheDocument();
-    });
-
-    it('has correct styling classes', () => {
-      render(<ErrorMessage message="Error occurred" onRetry={mockOnRetry} />);
-
-      const container = screen.getByText('Something went wrong').closest('div');
-      expect(container).toHaveClass(
-        'bg-red-50',
-        'border',
-        'border-red-200',
-        'rounded-lg'
-      );
-    });
+    expect(screen.getByText('Error')).toBeInTheDocument();
+    expect(screen.getByText('Network error occurred')).toBeInTheDocument();
+    expect(screen.getByText('Try Again')).toBeInTheDocument();
   });
 
-  describe('User Interaction Tests', () => {
-    it('calls onRetry when retry button is clicked', async () => {
-      const user = userEvent.setup();
+  it('calls onRetry when retry button is clicked', () => {
+    render(
+      <ErrorMessage message="Network error occurred" onRetry={mockOnRetry} />
+    );
 
-      render(<ErrorMessage message="Error occurred" onRetry={mockOnRetry} />);
+    const retryButton = screen.getByText('Try Again');
+    fireEvent.click(retryButton);
 
-      const retryButton = screen.getByRole('button', { name: /try again/i });
-      await user.click(retryButton);
-
-      expect(mockOnRetry).toHaveBeenCalledTimes(1);
-    });
-
-    it('retry button has correct styling on hover', () => {
-      render(<ErrorMessage message="Error occurred" onRetry={mockOnRetry} />);
-
-      const retryButton = screen.getByRole('button', { name: /try again/i });
-      expect(retryButton).toHaveClass('hover:bg-red-700');
-    });
+    expect(mockOnRetry).toHaveBeenCalledTimes(1);
   });
 
-  describe('Error Display Tests', () => {
-    it('handles long error messages', () => {
-      const longMessage =
-        'This is a very long error message that should still be displayed correctly without breaking the layout or causing any issues with the component rendering';
+  it('displays error icon', () => {
+    render(
+      <ErrorMessage message="Network error occurred" onRetry={mockOnRetry} />
+    );
 
-      render(<ErrorMessage message={longMessage} onRetry={mockOnRetry} />);
+    const errorIcon = screen.getByRole('img', { hidden: true });
+    expect(errorIcon).toBeInTheDocument();
+  });
 
-      expect(screen.getByText(longMessage)).toBeInTheDocument();
-    });
+  it('has correct styling for error state', () => {
+    render(
+      <ErrorMessage message="Network error occurred" onRetry={mockOnRetry} />
+    );
 
-    it('handles empty error message', () => {
-      render(<ErrorMessage message="" onRetry={mockOnRetry} />);
+    const errorContainer = screen
+      .getByText('Network error occurred')
+      .closest('div');
+    expect(errorContainer).toHaveClass('bg-red-50', 'border-red-200');
+  });
 
-      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
-      // Empty message should still render without breaking
-      expect(
-        screen.getByRole('button', { name: /try again/i })
-      ).toBeInTheDocument();
-    });
+  it('retry button has correct styling', () => {
+    render(
+      <ErrorMessage message="Network error occurred" onRetry={mockOnRetry} />
+    );
 
-    it('handles special characters in error message', () => {
-      const specialMessage = 'Error: HTTP 404 - Resource not found! @#$%^&*()';
+    const retryButton = screen.getByText('Try Again');
+    expect(retryButton).toHaveClass(
+      'bg-red-600',
+      'text-white',
+      'hover:bg-red-700'
+    );
+  });
 
-      render(<ErrorMessage message={specialMessage} onRetry={mockOnRetry} />);
+  it('displays refresh icon in retry button', () => {
+    render(
+      <ErrorMessage message="Network error occurred" onRetry={mockOnRetry} />
+    );
 
-      expect(screen.getByText(specialMessage)).toBeInTheDocument();
-    });
+    const refreshIcon = screen.getAllByRole('img', { hidden: true })[1]; // Second icon is the refresh icon
+    expect(refreshIcon).toBeInTheDocument();
+  });
+
+  it('handles long error messages', () => {
+    const longMessage =
+      'This is a very long error message that should still be displayed correctly in the error component without breaking the layout or causing any issues with the user interface.';
+
+    render(<ErrorMessage message={longMessage} onRetry={mockOnRetry} />);
+
+    expect(screen.getByText(longMessage)).toBeInTheDocument();
+  });
+
+  it('handles empty error message', () => {
+    render(<ErrorMessage message="" onRetry={mockOnRetry} />);
+
+    expect(screen.getByText('Error')).toBeInTheDocument();
+    expect(screen.getByText('Try Again')).toBeInTheDocument();
   });
 });

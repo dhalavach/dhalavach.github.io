@@ -1,7 +1,7 @@
 import { User, Calendar, Ruler, Weight } from 'lucide-react';
 import type { Character } from '../types/Character';
 
-interface CharacterCardProps {
+interface Props {
   character: Character;
   onClick?: (character: Character) => void;
 }
@@ -48,52 +48,40 @@ export const CharacterCard = ({ character, onClick }: Props) => {
             <User className="w-6 h-6 text-white" />
           </div>
         </div>
-        <Link
-          to={`/character/${character.uid}`}
-          className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors text-sm font-medium"
-        >
-          View Details
-          <ExternalLink className="w-4 h-4" />
-        </Link>
+
+        <div className="flex-1 min-w-0">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            {character.name}
+          </h3>
+
+          {description && (
+            <p className="text-gray-600 text-sm mb-3">{description}</p>
+          )}
+
+          <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+            {character.height !== 'unknown' && (
+              <div className="flex items-center space-x-1">
+                <Ruler className="w-3 h-3" />
+                <span>{character.height}cm</span>
+              </div>
+            )}
+
+            {character.mass !== 'unknown' && (
+              <div className="flex items-center space-x-1">
+                <Weight className="w-3 h-3" />
+                <span>{character.mass}kg</span>
+              </div>
+            )}
+
+            {character.birth_year !== 'unknown' && (
+              <div className="flex items-center space-x-1">
+                <Calendar className="w-3 h-3" />
+                <span>{character.birth_year}</span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-      
-      {isLoading && (
-        <div className="flex items-center justify-center py-4">
-          <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-          <span className="ml-2 text-sm text-gray-500">Loading details...</span>
-        </div>
-      )}
-
-      {error && (
-        <div className="text-sm text-gray-500 py-2">
-          <p>Unable to load character details</p>
-        </div>
-      )}
-
-      {details && !isLoading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <div>
-            <span className="font-medium text-gray-700">Height:</span>
-            <span className="ml-1 text-gray-600">
-              {details.height === 'unknown' ? 'Unknown' : `${details.height} cm`}
-            </span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Mass:</span>
-            <span className="ml-1 text-gray-600">
-              {details.mass === 'unknown' ? 'Unknown' : `${details.mass} kg`}
-            </span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Eye Color:</span>
-            <span className="ml-1 text-gray-600 capitalize">{details.eye_color}</span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Hair Color:</span>
-            <span className="ml-1 text-gray-600 capitalize">{details.hair_color}</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
