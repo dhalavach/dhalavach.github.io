@@ -5,12 +5,17 @@ import { debounce } from 'lodash-es';
 interface Props {
   onSearch: (searchTerm: string) => void;
   isLoading: boolean;
+  initialSearchTerm?: string;
 }
 
 const STORAGE_KEY = 'starwars-search-term';
 const DEBOUNCE_DELAY = 300; // ms - reduced for better responsiveness
 
-export const SearchSection = ({ onSearch, isLoading }: Props) => {
+export const SearchSection = ({
+  onSearch,
+  isLoading,
+  initialSearchTerm = '',
+}: Props) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [hasInitialized, setHasInitialized] = useState(false);
 
@@ -67,7 +72,9 @@ export const SearchSection = ({ onSearch, isLoading }: Props) => {
   // Initialize component and load saved search term
   useEffect(() => {
     try {
-      const savedTerm = localStorage.getItem(STORAGE_KEY) || '';
+      // Prioritize URL param over localStorage
+      const savedTerm =
+        initialSearchTerm || localStorage.getItem(STORAGE_KEY) || '';
       setSearchTerm(savedTerm);
 
       // Auto-search on component mount if there's a saved search term
@@ -83,7 +90,7 @@ export const SearchSection = ({ onSearch, isLoading }: Props) => {
     return () => {
       debouncedSearch.cancel();
     };
-  }, []); // Empty dependency array - only run once on mount
+  }, [initialSearchTerm]); // Re-run when initialSearchTerm changes
 
   return (
     <div className="bg-white shadow-sm border-b border-gray-200 p-6">
