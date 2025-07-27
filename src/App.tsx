@@ -1,94 +1,163 @@
 import { useState, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useCharacterCache } from './hooks/useCharacterCache';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { SearchSection } from './components/SearchSection';
 import { ResultsSection } from './components/ResultsSection';
-import { CharacterCard } from './components/CharacterCard';
+import { CharacterDetails } from './components/CharacterDetails';
 import type { Character } from './types/Character';
-import { Bug } from 'lucide-react';
 
-const App = () => {
-  const [characters, setCharacters] = useState<Character[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+interface Pagination {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+}
+
+function App() {
+  const { searchCharacters, isLoading, error } = useCharacterCache();
+  const [displayedCharacters, setDisplayedCharacters] = useState<Character[]>(
+    []
+  );
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [currentSearchTerm, setCurrentSearchTerm] = useState('');
+  const [pagination, setPagination] = useState<Pagination>({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+  });
 
-  const handleSearch = useCallback(async (searchTerm: string) => {
-    setIsLoading(true);
-    setError(null);
-    setCurrentSearchTerm(searchTerm);
-
-    try {
-      const response = await fetch(
-        `https://swapi.tech/api/people/?name=${encodeURIComponent(searchTerm)}`
-      );
-      const data = await response.json();
-
-      if (data.result && data.result.length > 0) {
-        setCharacters(
-          data.result.map((item: { properties: Character }) => item.properties)
-        );
-      } else {
-        setCharacters([]);
+  const handleSearch = useCallback(
+    async (searchTerm: string, page: number = 1) => {
+      if (!searchTerm.trim()) {
+        setDisplayedCharacters([]);
+        setPagination({
+          currentPage: 1,
+          totalPages: 1,
+          totalCount: 0,
+        });
+        setCurrentSearchTerm('');
+        return;
       }
-    } catch (error) {
-      console.error('Search error:', error);
-      setError(
-        error instanceof Error ? error.message : 'An unexpected error occurred'
-      );
-      setCharacters([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-  const handleRetry = () => {
-    handleSearch(currentSearchTerm);
-  };
 
-  const throwTestError = () => {
-    throw new Error(
-      'This is a test error to demonstrate the error boundary functionality'
-    );
-  };
+      // Don't search if it's the same term and page (unless it's a retry)
+      if (
+        searchTerm === currentSearchTerm &&
+        page === pagination.currentPage &&
+        displayedCharacters.length > 0 &&
+        !searchError
+      ) {
+        return;
+      }
+
+      setSearchError(null);
+      setCurrentSearchTerm(searchTerm);
+
+      try {
+        // Use cached search
+        const filteredCharacters = await searchCharacters(searchTerm);
+
+        // Implement pagination on filtered results
+        const itemsPerPage = 10;
+        const totalPages = Math.ceil(filteredCharacters.length / itemsPerPage);
+        const startIndex = (page - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginatedCharacters = filteredCharacters.slice(
+          startIndex,
+          endIndex
+        );
+
+        if (filteredCharacters.length > 0) {
+          setDisplayedCharacters(paginatedCharacters);
+          setPagination({
+            currentPage: page,
+            totalPages: totalPages,
+            totalCount: filteredCharacters.length,
+          });
+        } else {
+          setDisplayedCharacters([]);
+          setPagination({
+            currentPage: 1,
+            totalPages: 1,
+            totalCount: 0,
+          });
+        }
+      } catch (error) {
+        console.error('Search error:', error);
+        setSearchError(
+          error instanceof Error
+            ? error.message
+            : 'An unexpected error occurred while searching'
+        );
+        setDisplayedCharacters([]);
+        setPagination({
+          currentPage: 1,
+          totalPages: 1,
+          totalCount: 0,
+        });
+      }
+    },
+    [
+      searchCharacters,
+      currentSearchTerm,
+      pagination.currentPage,
+      displayedCharacters.length,
+      searchError,
+    ]
+  );
+
+  const handleRetry = useCallback(() => {
+    if (currentSearchTerm) {
+      setSearchError(null);
+      handleSearch(currentSearchTerm, pagination.currentPage);
+    }
+  }, [currentSearchTerm, pagination.currentPage, handleSearch]);
+
+  const handlePageChange = useCallback(
+    (page: number) => {
+      if (currentSearchTerm) {
+        handleSearch(currentSearchTerm, page);
+      }
+    },
+    [currentSearchTerm, handleSearch]
+  );
 
   return (
     <Router>
       <ErrorBoundary>
         <div className="min-h-screen bg-gray-50 flex flex-col">
-          <SearchSection onSearch={handleSearch} isLoading={isLoading} />
+          <SearchSection
+            onSearch={(term) => handleSearch(term, 1)}
+            isLoading={isLoading}
+          />
 
           <Routes>
             <Route
               path="/"
               element={
                 <ResultsSection
-                  characters={characters}
+                  characters={displayedCharacters}
                   isLoading={isLoading}
-                  error={error}
+                  error={error || searchError}
                   onRetry={handleRetry}
+                  pagination={pagination}
+                  onPageChange={handlePageChange}
                 />
               }
             />
             <Route
               path="/character/:id"
-              element={<CharacterCard character={characters[0]} />}
+              element={
+                <CharacterDetails
+                  characters={displayedCharacters}
+                  onBack={() => window.history.back()}
+                />
+              }
             />
           </Routes>
-
-          {/* Error Test Button */}
-          <div className="fixed bottom-4 right-4">
-            <button
-              onClick={throwTestError}
-              className="bg-red-600 text-white p-3 rounded-full shadow-lg hover:bg-red-700 transition-colors"
-              title="Test Error Boundary"
-            >
-              <Bug className="w-5 h-5" />
-            </button>
-          </div>
         </div>
       </ErrorBoundary>
     </Router>
   );
-};
+}
 
 export default App;
