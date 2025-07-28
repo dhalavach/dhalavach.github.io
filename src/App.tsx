@@ -1,10 +1,10 @@
-import React from 'react';
 import { useState, useCallback } from 'react';
 import { SearchSection } from './components/SearchSection';
 import { ResultsSection } from './components/ResultsSection';
 import { CharacterDetailsPanel } from './components/CharacterDetailsPanel';
 import { APIService, createPaginationInfo } from './services/api';
 import type { Character, PaginationInfo } from './types/Character';
+import { About } from './components/About';
 
 const App = () => {
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -78,6 +78,8 @@ const App = () => {
         onPageChange={handlePageChange}
         onCharacterClick={handleCharacterClick}
       />
+      <About />
+
       <CharacterDetailsPanel
         character={selectedCharacter}
         isOpen={isDetailsPanelOpen}
@@ -85,6 +87,6 @@ const App = () => {
       />
     </div>
   );
-}
+};
 
 export default App;
