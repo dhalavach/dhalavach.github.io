@@ -1,0 +1,7 @@
+echo "Running pre-push checks..."
+
+npm run test
+npm run type-check
+npm run build
+
+echo "✓ All checks passed!"

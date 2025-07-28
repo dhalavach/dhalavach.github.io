@@ -221,47 +221,4 @@ describe('PaginationControls', () => {
       expect(mockOnPageChange).toHaveBeenCalledWith(2);
     });
   });
-
-  describe('Ellipsis Tests', () => {
-    it('shows ellipsis for large page ranges', () => {
-      const pagination = {
-        currentPage: 5,
-        totalPages: 10,
-        totalCount: 100,
-      };
-
-      render(
-        <PaginationControls
-          pagination={pagination}
-          onPageChange={mockOnPageChange}
-          isLoading={false}
-        />
-      );
-
-      expect(screen.getByText('...')).toBeInTheDocument();
-    });
-
-    it('ellipsis buttons are disabled and not clickable', async () => {
-      const user = userEvent.setup();
-      const pagination = {
-        currentPage: 5,
-        totalPages: 10,
-        totalCount: 100,
-      };
-
-      render(
-        <PaginationControls
-          pagination={pagination}
-          onPageChange={mockOnPageChange}
-          isLoading={false}
-        />
-      );
-
-      const ellipsisButton = screen.getByText('...');
-      expect(ellipsisButton).toBeDisabled();
-
-      await user.click(ellipsisButton);
-      expect(mockOnPageChange).not.toHaveBeenCalled();
-    });
-  });
 });

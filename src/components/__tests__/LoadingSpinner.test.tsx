@@ -12,7 +12,7 @@ describe('LoadingSpinner', () => {
   it('renders loading icon', () => {
     render(<LoadingSpinner />);
 
-    const spinner = screen.getByRole('img', { hidden: true });
+    const spinner = screen.getByTestId('spinner');
     expect(spinner).toBeInTheDocument();
     expect(spinner).toHaveClass('animate-spin');
   });

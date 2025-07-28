@@ -45,7 +45,7 @@ export const CharacterCard = ({ character, onClick }: Props) => {
       <div className="flex items-start space-x-4">
         <div className="flex-shrink-0">
           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-            <User className="w-6 h-6 text-white" />
+            <User data-testid="avatar" className="w-6 h-6 text-white" />
           </div>
         </div>
 

@@ -1160,7 +1160,8 @@ export class APIService {
       params.append('page', page.toString());
 
       if (params.toString()) {
-        url += `?${params.toString()}`;
+        const decodedURL = url + `?${params.toString()}`;
+        url = encodeURI(decodedURL);
       }
 
       const controller = new AbortController();

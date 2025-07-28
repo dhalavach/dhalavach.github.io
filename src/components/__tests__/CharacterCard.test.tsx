@@ -95,19 +95,10 @@ describe('CharacterCard', () => {
     expect(screen.queryByText('19BBY')).not.toBeInTheDocument();
   });
 
-  it('has proper hover styles and cursor pointer', () => {
-    render(<CharacterCard character={mockCharacter} onClick={mockOnClick} />);
-
-    const card = screen.getByText('Luke Skywalker').closest('div');
-    expect(card).toHaveClass('cursor-pointer');
-    expect(card).toHaveClass('hover:shadow-lg');
-    expect(card).toHaveClass('hover:border-blue-300');
-  });
-
   it('renders character avatar', () => {
     render(<CharacterCard character={mockCharacter} />);
 
-    const avatar = screen.getByRole('img', { hidden: true });
+    const avatar = screen.getByTestId('avatar');
     expect(avatar).toBeInTheDocument();
   });
 

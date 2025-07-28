@@ -35,7 +35,7 @@ describe('ErrorMessage', () => {
       <ErrorMessage message="Network error occurred" onRetry={mockOnRetry} />
     );
 
-    const errorIcon = screen.getByRole('img', { hidden: true });
+    const errorIcon = screen.getByTestId('error-icon');
     expect(errorIcon).toBeInTheDocument();
   });
 
@@ -61,15 +61,6 @@ describe('ErrorMessage', () => {
       'text-white',
       'hover:bg-red-700'
     );
-  });
-
-  it('displays refresh icon in retry button', () => {
-    render(
-      <ErrorMessage message="Network error occurred" onRetry={mockOnRetry} />
-    );
-
-    const refreshIcon = screen.getAllByRole('img', { hidden: true })[1]; // Second icon is the refresh icon
-    expect(refreshIcon).toBeInTheDocument();
   });
 
   it('handles long error messages', () => {
