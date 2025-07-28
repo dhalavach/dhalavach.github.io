@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://dhalavach.github.io/",
+  "homepage": "https://dhalavach.github.io",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
