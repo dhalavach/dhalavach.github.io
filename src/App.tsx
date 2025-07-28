@@ -5,7 +5,8 @@ import { CharacterDetailsPanel } from './components/CharacterDetailsPanel';
 import { APIService, createPaginationInfo } from './services/api';
 import type { Character, PaginationInfo } from './types/Character';
 import { About } from './components/About';
-
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { NotFound } from './components/NotFound';
 const App = () => {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
@@ -67,25 +68,55 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col relative">
-      <SearchSection onSearch={handleSearch} isLoading={isLoading} />
-      <ResultsSection
-        characters={characters}
-        pagination={pagination}
-        isLoading={isLoading}
-        error={error}
-        onRetry={handleRetry}
-        onPageChange={handlePageChange}
-        onCharacterClick={handleCharacterClick}
-      />
-      <About />
+    <Router>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <div className="min-h-screen bg-gray-50 flex flex-col relative">
+              <SearchSection onSearch={handleSearch} isLoading={isLoading} />
+              <ResultsSection
+                characters={characters}
+                pagination={pagination}
+                isLoading={isLoading}
+                error={error}
+                onRetry={handleRetry}
+                onPageChange={handlePageChange}
+                onCharacterClick={handleCharacterClick}
+              />
+              <About />
 
-      <CharacterDetailsPanel
-        character={selectedCharacter}
-        isOpen={isDetailsPanelOpen}
-        onClose={handleCloseDetailsPanel}
-      />
-    </div>
+              <CharacterDetailsPanel
+                character={selectedCharacter}
+                isOpen={isDetailsPanelOpen}
+                onClose={handleCloseDetailsPanel}
+              />
+            </div>
+          }
+        />
+
+        <Route path="*" element={<NotFound />} />
+        {/* <div className="min-h-screen bg-gray-50 flex flex-col relative">
+          <SearchSection onSearch={handleSearch} isLoading={isLoading} />
+          <ResultsSection
+            characters={characters}
+            pagination={pagination}
+            isLoading={isLoading}
+            error={error}
+            onRetry={handleRetry}
+            onPageChange={handlePageChange}
+            onCharacterClick={handleCharacterClick}
+          />
+          <About />
+
+          <CharacterDetailsPanel
+            character={selectedCharacter}
+            isOpen={isDetailsPanelOpen}
+            onClose={handleCloseDetailsPanel}
+          />
+        </div> */}
+      </Routes>
+    </Router>
   );
 };
 
