@@ -50,7 +50,7 @@ describe('APIService', () => {
       const result = await APIService.searchCharacters('Luke');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://swapi.dev/api/people/?search=Luke&page=1',
+        'https://swapi.py4e.com/api//people/?search=Luke&page=1',
         expect.objectContaining({
           method: 'GET',
           headers: {
@@ -79,7 +79,7 @@ describe('APIService', () => {
       const result = await APIService.searchCharacters('');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://swapi.dev/api/people/?page=1',
+        'https://swapi.py4e.com/api//people/?page=1',
         expect.any(Object)
       );
 
@@ -102,7 +102,7 @@ describe('APIService', () => {
       await APIService.searchCharacters('C-3PO & R2-D2');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://swapi.dev/api/people/?search=C-3PO+%2526+R2-D2&page=1',
+        'https://swapi.py4e.com/api//people/?search=C-3PO+%2526+R2-D2&page=1',
         expect.any(Object)
       );
     });

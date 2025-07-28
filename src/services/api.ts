@@ -1096,7 +1096,7 @@ const MOCK_CHARACTERS = [
   },
 ];
 
-const BASE_URL = 'https://swapi.dev/api';
+const BASE_URL = 'https://swapi.py4e.com/api/'; //fucking finally
 const MAX_RETRIES = 2;
 const RETRY_DELAY = 1000;
 const ITEMS_PER_PAGE = 10;
